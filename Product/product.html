@@ -964,7 +964,7 @@
                 /* ====== STOCK ====== */
                 function getStock(p) {
                     const raw =
-                        p.stock ? ? p.qty ? ? p.quantity ? ? p.inventory ? ? p.quantity_in_stock ? ? 0;
+                        p.stock ?? p.qty ?? p.quantity ?? p.inventory ?? p.quantity_in_stock ?? 0;
                     const n = Number(raw);
                     return isNaN(n) ? 0 : n;
                 }
@@ -1020,7 +1020,7 @@
                             localStorage.getItem("admin.categories") || "[]"
                         );
                         return raw
-                            .filter((c) => c && (c.active ? ? true))
+                            .filter((c) => c && (c.active ?? true))
                             .map((c) => ({
                                 slug: c.name === "Sáp vuốt tóc" ?
                                     "hair_wax" : c.name === "Gôm xịt" ?
