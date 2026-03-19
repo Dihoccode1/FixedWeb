@@ -29,9 +29,9 @@
       <div class="container">
         <div class="header-main">
           <div class="header-left">
-            <!-- Search => /sanpham/sanpham.html?q= -->
+            <!-- Search => /Product/product.html?q= -->
             <form
-              action="../sanpham/sanpham.html"
+              action="../sanpham/product.html"
               method="get"
               class="search-bar"
               autocomplete="off"
@@ -59,7 +59,7 @@
           </div>
 
           <div class="header-right">
-            <a href="../giohang.html" class="cart-link">
+            <a href="../cart.html" class="cart-link">
               <i class="fa-solid fa-cart-shopping"></i>
               GIỎ HÀNG (<span class="cart-count">0</span>)
             </a>
@@ -71,12 +71,12 @@
     <nav class="main-nav">
       <ul>
         <li><a href="../index.html">TRANG CHỦ</a></li>
-        <li><a href="../gioithieu.html">GIỚI THIỆU</a></li>
+        <li><a href="../about.html">GIỚI THIỆU</a></li>
         <li>
-          <a href="../sanpham/sanpham.html" class="js-products-url">SẢN PHẨM</a>
+          <a href="../sanpham/product.html" class="js-products-url">SẢN PHẨM</a>
         </li>
-        <li><a href="../tintuc.html">TIN TỨC</a></li>
-        <li><a href="../lienhe.html">LIÊN HỆ</a></li>
+        <li><a href="../news.html">TIN TỨC</a></li>
+        <li><a href="../contact.html">LIÊN HỆ</a></li>
       </ul>
     </nav>
 
@@ -86,10 +86,10 @@
         function getProductsURL() {
           var a =
             d.querySelector("nav.main-nav a.js-products-url") ||
-            d.querySelector('nav.main-nav a[href*="/sanpham"]');
+            d.querySelector('nav.main-nav a[href*="/Product"]');
           return a && a.getAttribute("href")
             ? a.getAttribute("href")
-            : "../sanpham/sanpham.html";
+            : "../sanpham/product.html";
         }
 
         var form = d.querySelector(".search-bar");
@@ -171,13 +171,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../sanpham/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -186,13 +186,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../sanpham/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -201,13 +201,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../sanpham/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -216,13 +216,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../sanpham/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -272,12 +272,12 @@
                     <a href="../index.html" title="Trang chủ">Trang chủ</a>
                   </li>
                   <li>
-                    <a href="../gioithieu.html" title="Giới thiệu"
+                    <a href="../about.html" title="Giới thiệu"
                       >Giới thiệu</a
                     >
                   </li>
                   <li>
-                    <a href="../sanpham/sanpham.html" title="Sản phẩm"
+                    <a href="../sanpham/product.html" title="Sản phẩm"
                       >Sản phẩm</a
                     >
                   </li>
@@ -285,7 +285,7 @@
                     <a href="../tin-tuc.html" title="Tin tức">Tin tức</a>
                   </li>
                   <li>
-                    <a href="../lienhe.html" title="Liên hệ">Liên hệ</a>
+                    <a href="../contact.html" title="Liên hệ">Liên hệ</a>
                   </li>
                 </ul>
               </nav>
@@ -631,7 +631,7 @@
 
         // Cho phép tab khác gọi reload
         window.UserOrdersReload = load;
-      })();
+      })(window, document);
     </script>
 
     <!-- Bridge: {email:[orders]} -> flat array cho Admin -->
@@ -660,7 +660,7 @@
         });
 
         window.BridgeOrders = { flattenNow: flatten };
-      })();
+      })(window, document);
     </script>
 
     <!-- Nghe tín hiệu để tự reload khi Admin/User khác thay đổi -->

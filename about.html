@@ -321,7 +321,7 @@
       <div class="header-main">
         <div class="header-left">
           <!-- Search: chặn autofill & gõ dấu ok, đẩy sang trang sản phẩm -->
-          <form action="./sanpham/sanpham.html" method="get" class="search-bar" autocomplete="off">
+          <form action="./sanpham/product.html" method="get" class="search-bar" autocomplete="off">
             <input type="text" name="query" placeholder="Tìm kiếm" autocomplete="off" autocapitalize="off"
               autocorrect="off" spellcheck="false" inputmode="search" />
             <button type="submit" aria-label="Tìm kiếm">
@@ -337,7 +337,7 @@
         </div>
 
         <div class="header-right">
-          <a href="./giohang.html" class="cart-link">
+          <a href="./cart.html" class="cart-link">
             <i class="fa-solid fa-cart-shopping"></i>
             GIỎ HÀNG (<span class="cart-count">0</span>)
           </a>
@@ -350,10 +350,10 @@
   <nav class="main-nav">
     <ul>
       <li><a href="./index.html">TRANG CHỦ</a></li>
-      <li><a href="./gioithieu.html">GIỚI THIỆU</a></li>
-      <li><a href="./sanpham/sanpham.html" class="js-products-url">SẢN PHẨM</a></li>
-      <li><a href="./tintuc.html">TIN TỨC</a></li>
-      <li><a href="./lienhe.html">LIÊN HỆ</a></li>
+      <li><a href="./about.html">GIỚI THIỆU</a></li>
+      <li><a href="./sanpham/product.html" class="js-products-url">SẢN PHẨM</a></li>
+      <li><a href="./news.html">TIN TỨC</a></li>
+      <li><a href="./contact.html">LIÊN HỆ</a></li>
     </ul>
   </nav>
 
@@ -362,10 +362,10 @@
     (function (w, d) {
       function getProductsURL() {
         var a = d.querySelector("nav.main-nav a.js-products-url") ||
-          d.querySelector('nav.main-nav a[href*="/sanpham"]');
+          d.querySelector('nav.main-nav a[href*="/Product"]');
         return (a && a.getAttribute("href"))
           ? a.getAttribute("href")
-          : "./sanpham/sanpham.html";
+          : "./sanpham/product.html";
       }
 
       var form = d.querySelector(".search-bar");
@@ -486,10 +486,10 @@
               <h4 class="title-menu">Thông tin</h4>
               <ul class="list-menu">
                 <li class="li_menu"><a href="./index.html">Trang chủ</a></li>
-                <li class="li_menu"><a href="./gioithieu.html">Giới thiệu</a></li>
-                <li class="li_menu"><a href="./sanpham/sanpham.html">Sản phẩm</a></li>
-                <li class="li_menu"><a href="./tintuc.html">Tin tức</a></li>
-                <li class="li_menu"><a href="./lienhe.html">Liên hệ</a></li>
+                <li class="li_menu"><a href="./about.html">Giới thiệu</a></li>
+                <li class="li_menu"><a href="./sanpham/product.html">Sản phẩm</a></li>
+                <li class="li_menu"><a href="./news.html">Tin tức</a></li>
+                <li class="li_menu"><a href="./contact.html">Liên hệ</a></li>
               </ul>
             </section>
 
@@ -497,10 +497,10 @@
               <h4 class="title-menu">Hỗ trợ</h4>
               <ul class="list-menu">
                 <li class="li_menu"><a href="./index.html">Trang chủ</a></li>
-                <li class="li_menu"><a href="./gioithieu.html">Giới thiệu</a></li>
-                <li class="li_menu"><a href="./sanpham/sanpham.html">Sản phẩm</a></li>
-                <li class="li_menu"><a href="./tintuc.html">Tin tức</a></li>
-                <li class="li_menu"><a href="./lienhe.html">Liên hệ</a></li>
+                <li class="li_menu"><a href="./about.html">Giới thiệu</a></li>
+                <li class="li_menu"><a href="./sanpham/product.html">Sản phẩm</a></li>
+                <li class="li_menu"><a href="./news.html">Tin tức</a></li>
+                <li class="li_menu"><a href="./contact.html">Liên hệ</a></li>
               </ul>
             </section>
 
@@ -508,10 +508,10 @@
               <h4 class="title-menu">Hướng dẫn</h4>
               <ul class="list-menu">
                 <li class="li_menu"><a href="./index.html">Trang chủ</a></li>
-                <li class="li_menu"><a href="./gioithieu.html">Giới thiệu</a></li>
-                <li class="li_menu"><a href="./sanpham/sanpham.html">Sản phẩm</a></li>
-                <li class="li_menu"><a href="./tintuc.html">Tin tức</a></li>
-                <li class="li_menu"><a href="./lienhe.html">Liên hệ</a></li>
+                <li class="li_menu"><a href="./about.html">Giới thiệu</a></li>
+                <li class="li_menu"><a href="./Product/product.html">Sản phẩm</a></li>
+                <li class="li_menu"><a href="./news.html">Tin tức</a></li>
+                <li class="li_menu"><a href="./contact.html">Liên hệ</a></li>
               </ul>
             </section>
 
@@ -519,10 +519,10 @@
               <h4 class="title-menu">Chính sách</h4>
               <ul class="list-menu">
                 <li class="li_menu"><a href="./index.html">Trang chủ</a></li>
-                <li class="li_menu"><a href="./gioithieu.html">Giới thiệu</a></li>
-                <li class="li_menu"><a href="./sanpham/sanpham.html">Sản phẩm</a></li>
-                <li class="li_menu"><a href="./tintuc.html">Tin tức</a></li>
-                <li class="li_menu"><a href="./lienhe.html">Liên hệ</a></li>
+                <li class="li_menu"><a href="./about.html">Giới thiệu</a></li>
+                <li class="li_menu"><a href="./Product/product.html">Sản phẩm</a></li>
+                <li class="li_menu"><a href="./news.html">Tin tức</a></li>
+                <li class="li_menu"><a href="./contact.html">Liên hệ</a></li>
               </ul>
             </section>
 
@@ -558,10 +558,10 @@
             <nav class="fot_menu_copyright">
               <ul class="ul_menu_fot">
                 <li><a href="./index.html" title="Trang chủ">Trang chủ</a></li>
-                <li><a href="./gioithieu.html" title="Giới thiệu">Giới thiệu</a></li>
-                <li><a href="./sanpham/sanpham.html" title="Sản phẩm">Sản phẩm</a></li>
+                <li><a href="./about.html" title="Giới thiệu">Giới thiệu</a></li>
+                <li><a href="./Product/product.html" title="Sản phẩm">Sản phẩm</a></li>
                 <li><a href="./tin-tuc" title="Tin tức">Tin tức</a></li>
-                <li><a href="./lienhe.html" title="Liên hệ">Liên hệ</a></li>
+                <li><a href="./contact.html" title="Liên hệ">Liên hệ</a></li>
               </ul>
             </nav>
             <div class="pay_footer">
@@ -641,7 +641,7 @@
         bindClick();
       });
       window.addEventListener("resize", setInitialState);
-    })();
+    })(window, document);
   </script>
 
   <!-- Kick guard (nếu cần ép login/đá session lạ) -->

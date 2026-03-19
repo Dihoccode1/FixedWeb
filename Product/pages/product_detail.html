@@ -477,7 +477,7 @@
           </div>
 
           <div class="header-right">
-            <a href="../../giohang.html" class="cart-link">
+            <a href="../../cart.html" class="cart-link">
               <i class="fa-solid fa-cart-shopping"></i>
               GIỎ HÀNG (<span class="cart-count">0</span>)
             </a>
@@ -489,12 +489,12 @@
     <nav class="main-nav">
       <ul>
         <li><a href="../../index.html">TRANG CHỦ</a></li>
-        <li><a href="../../gioithieu.html">GIỚI THIỆU</a></li>
+        <li><a href="../../about.html">GIỚI THIỆU</a></li>
         <li>
           <a href="../sanpham.html" class="js-products-url">SẢN PHẨM</a>
         </li>
-        <li><a href="../../tintuc.html">TIN TỨC</a></li>
-        <li><a href="../../lienhe.html">LIÊN HỆ</a></li>
+        <li><a href="../../news.html">TIN TỨC</a></li>
+        <li><a href="../../contact.html">LIÊN HỆ</a></li>
       </ul>
     </nav>
 
@@ -504,7 +504,7 @@
         function getProductsURL() {
           var a =
             d.querySelector("nav.main-nav a.js-products-url") ||
-            d.querySelector('nav.main-nav a[href*="/sanpham"]');
+            d.querySelector('nav.main-nav a[href*="/Product"]');
           return a && a.getAttribute("href")
             ? a.getAttribute("href")
             : "../sanpham.html";
@@ -605,7 +605,7 @@
             window.SV_PRODUCT_SEED = fromAdmin;
           }
         } catch (e) {}
-      })();
+      })(window, document);
     </script>
 
     <script src="../../assets/js/store.js"></script>
@@ -1319,7 +1319,7 @@
           window.SVUI?.updateCartCount?.();
           refreshLimitUI();
         });
-      })();
+      })(window, document);
     </script>
 
     <!-- Tự refresh khi catalog thay đổi (Admin cập nhật) -->

@@ -349,7 +349,7 @@
         <div class="header-main">
           <div class="header-left">
             <form
-              action="../sanpham/sanpham.html"
+              action="../Product/product.html"
               method="get"
               class="search-bar"
               autocomplete="off"
@@ -377,7 +377,7 @@
           </div>
 
           <div class="header-right">
-            <a href="../giohang.html" class="cart-link">
+            <a href="../cart.html" class="cart-link">
               <i class="fa-solid fa-cart-shopping"></i>
               GIỎ HÀNG (<span class="cart-count">0</span>)
             </a>
@@ -389,12 +389,12 @@
     <nav class="main-nav">
       <ul>
         <li><a href="../index.html">TRANG CHỦ</a></li>
-        <li><a href="../gioithieu.html">GIỚI THIỆU</a></li>
+        <li><a href="../about.html">GIỚI THIỆU</a></li>
         <li>
-          <a href="../sanpham/sanpham.html" class="js-products-url">SẢN PHẨM</a>
+          <a href="../Product/product.html" class="js-products-url">SẢN PHẨM</a>
         </li>
-        <li><a href="../tintuc.html">TIN TỨC</a></li>
-        <li><a href="../lienhe.html">LIÊN HỆ</a></li>
+        <li><a href="../news.html">TIN TỨC</a></li>
+        <li><a href="../contact.html">LIÊN HỆ</a></li>
       </ul>
     </nav>
 
@@ -404,10 +404,10 @@
         function getProductsURL() {
           var a =
             d.querySelector("nav.main-nav a.js-products-url") ||
-            d.querySelector('nav.main-nav a[href*="/sanpham"]');
+            d.querySelector('nav.main-nav a[href*="/Product"]');
           return a && a.getAttribute("href")
             ? a.getAttribute("href")
-            : "../sanpham/sanpham.html";
+            : "../Product/product.html";
         }
 
         var form = d.querySelector(".search-bar");
@@ -476,7 +476,7 @@
             >
           </li>
           <li>
-            <a href="../tintuc.html"><span>Tin tức</span></a>
+            <a href="../news.html"><span>Tin tức</span></a>
             <span class="mr_lr"
               >&nbsp;<i class="fa fa-angle-right"></i>&nbsp;</span
             >
@@ -501,7 +501,7 @@
                 <div class="aside-title">
                   <h2  class="title-head inline-clean-47">
                     <span
-                      ><a href="../tintuc.html" title="Bài viết mới nhất"
+                      ><a href="../news.html" title="Bài viết mới nhất"
                         >Bài viết mới nhất</a
                       ></span
                     >
@@ -528,7 +528,7 @@
                     <div class="loop-blog">
                       <div class="name-right">
                         <h3>
-                          <a href="../News_Section/huong_dan.html"
+                          <a href="../News_Section/tutorial.html"
                             >Hướng dẫn sử dụng sáp vuốt tóc đúng cách</a
                           >
                         </h3>
@@ -539,7 +539,7 @@
                     <div class="loop-blog">
                       <div class="name-right">
                         <h3>
-                          <a href="../News_Section/goi_y.html">
+                          <a href="../News_Section/hint.html">
                             Gợi ý loại sáp vuốt tóc nam tốt nhất nên dùng thử
                             một lần trong đời
                           </a>
@@ -551,7 +551,7 @@
                     <div class="loop-blog">
                       <div class="name-right">
                         <h3>
-                          <a href="../News_Section/bao_quan.html">
+                          <a href="../News_Section/maintenance.html">
                             Cách bảo quản sáp vuốt tóc để dùng lâu và hiệu quả
                           </a>
                         </h3>
@@ -562,7 +562,7 @@
                     <div class="loop-blog">
                       <div class="name-right">
                         <h3>
-                          <a href="../News_Section/phan_biet.html"
+                          <a href="../News_Section/distinguish.html"
                             >Cách phân biệt sáp vuốt tóc thật và giả</a
                           >
                         </h3>
@@ -640,10 +640,10 @@
             <div class="prevnext">
               <div>
                 ←
-                <a href="../News_Section/goi_y.html">Bài viết trước</a>
+                <a href="../News_Section/hint.html">Bài viết trước</a>
               </div>
               <div>
-                <a href="../News_Section/phan_biet.html">Bài viết sau</a>
+                <a href="../News_Section/distinguish.html">Bài viết sau</a>
                 →
               </div>
             </div>
@@ -722,13 +722,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../Product/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -737,13 +737,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../Product/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -752,13 +752,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../Product/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -767,13 +767,13 @@
                 <ul class="list-menu">
                   <li class="li_menu"><a href="../index.html">Trang chủ</a></li>
                   <li class="li_menu">
-                    <a href="../gioithieu.html">Giới thiệu</a>
+                    <a href="../about.html">Giới thiệu</a>
                   </li>
                   <li class="li_menu">
-                    <a href="../sanpham/sanpham.html">Sản phẩm</a>
+                    <a href="../Product/product.html">Sản phẩm</a>
                   </li>
-                  <li class="li_menu"><a href="../tintuc.html">Tin tức</a></li>
-                  <li class="li_menu"><a href="../lienhe.html">Liên hệ</a></li>
+                  <li class="li_menu"><a href="../news.html">Tin tức</a></li>
+                  <li class="li_menu"><a href="../contact.html">Liên hệ</a></li>
                 </ul>
               </section>
 
@@ -825,17 +825,17 @@
                     <a href="../index.html" title="Trang chủ">Trang chủ</a>
                   </li>
                   <li>
-                    <a href="../gioithieu.html" title="Giới thiệu"
+                    <a href="../about.html" title="Giới thiệu"
                       >Giới thiệu</a
                     >
                   </li>
                   <li>
-                    <a href="../sanpham/sanpham.html" title="Sản phẩm"
+                    <a href="../Product/product.html" title="Sản phẩm"
                       >Sản phẩm</a
                     >
                   </li>
-                  <li><a href="../tintuc.html" title="Tin tức">Tin tức</a></li>
-                  <li><a href="../lienhe.html" title="Liên hệ">Liên hệ</a></li>
+                  <li><a href="../news.html" title="Tin tức">Tin tức</a></li>
+                  <li><a href="../contact.html" title="Liên hệ">Liên hệ</a></li>
                 </ul>
               </nav>
               <div class="pay_footer">
