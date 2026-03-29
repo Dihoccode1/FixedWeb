@@ -162,11 +162,11 @@ $(document).ready(function () {
       $infoBlock.empty().slideDown();
 
       if (method === "online") {
-        $infoBlock.html(
+        $infoBlock.php(
           '<div class="alert alert-warning">Bạn đã chọn **Thanh toán trực tuyến**. Hệ thống sẽ chuyển đến cổng thanh toán sau khi xác nhận đơn hàng. (Chức năng chưa được xử lý tiếp)</div>'
         );
       } else if (method === "transfer") {
-        $infoBlock.html(
+        $infoBlock.php(
           '<div class="alert alert-info">Vui lòng chuyển khoản với nội dung: MÃ_ĐƠN_HÀNG. Đơn hàng sẽ được xác nhận sau khi nhận được tiền.</div>'
         );
       } else {
@@ -225,7 +225,7 @@ $(document).ready(function () {
         `;
 
     // Hiển thị tóm tắt và mở nút đặt hàng
-    $("#order-final-summary").html(summaryHtml).slideDown();
+    $("#order-final-summary").php(summaryHtml).slideDown();
     $("#btn-place-order")
       .prop("disabled", false)
       .removeClass("btn-secondary")
@@ -284,7 +284,7 @@ $(document).ready(function () {
                     <td><span class="badge ${statusClass}">${
         order.status
       }</span></td>
-                    <td><a href="chitietdonhang.html?id=${
+                    <td><a href="chitietdonhang.php?id=${
                       order.id
                     }" class="btn btn-sm btn-info">Chi tiết</a></td>
                 </tr>
@@ -293,3 +293,4 @@ $(document).ready(function () {
     });
   }
 });
+

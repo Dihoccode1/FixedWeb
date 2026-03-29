@@ -30,8 +30,8 @@ if (toggleBtn && nav && main) {
 
     if (!u) return;
 
-    // Lấy username: ưu tiên u.username, fallback u.account, u.email...
-    const username = u.username || u.account || u.email || u.name || "admin";
+    // Ưu tiên tên hiển thị để đồng nhất giao diện, fallback mới tới username.
+    const username = u.fullname || u.name || u.username || u.account || u.email || "Admin";
 
     // Map role → chữ tiếng Việt đẹp hơn
     const r = (u.role || "admin").toLowerCase();

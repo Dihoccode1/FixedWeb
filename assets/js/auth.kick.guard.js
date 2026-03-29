@@ -4,21 +4,20 @@
  */
 (function () {
   // ==== cấu hình đường dẫn login (tự suy đoán + fallback) ====
+  function fallbackLoginUrl() {
+    var pathname = String(location.pathname || '').replace(/\\/g, '/').toLowerCase();
+    if (pathname.indexOf('/account/') !== -1) return 'login.php';
+    if (pathname.indexOf('/product/pages/') !== -1) return '../../account/login.php';
+    if (pathname.indexOf('/product/') !== -1 || pathname.indexOf('/news_section/') !== -1) return '../account/login.php';
+    return './account/login.php';
+  }
+
   function guessLoginURL() {
     if (window.AUTH?.LOGIN_URL) return window.AUTH.LOGIN_URL;
     // tìm anchor có chữ login
     var a = document.querySelector('a[href*="login"]');
     if (a && a.href) return a.href;
-    // các fallback phổ biến (đổi theo site bạn)
-    var candidates = [
-      "../../account/login.html",
-      "/dangnhap.html",
-      "../../account/login.html",
-      "../../account/login.html",
-      "./dangnhap.html",
-      "../../account/login.html",
-    ];
-    return candidates[0];
+    return fallbackLoginUrl();
   }
   var LOGIN_URL = guessLoginURL();
 
@@ -145,3 +144,4 @@
   // 3) dự phòng: poll nhẹ mỗi 5s (phòng khi không có storage event)
   setInterval(checkNow, 5000);
 })();
+

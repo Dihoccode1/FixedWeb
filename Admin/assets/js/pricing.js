@@ -1,165 +1,128 @@
-// =====================
-// LocalStorage keys
-// =====================
-const CAT_KEY = "admin.categories";
-const PROD_KEY = "admin.products";
+const API_BASE = "./api/products.php";
+const CAT_API = "./api/categories.php";
 
-const PUBLIC_CATALOG_KEY = "sv_products_v1"; // site khách đọc key này
-const BUMP_KEY = "catalog.bump"; // báo cho trang khách tự refresh
-
-// =====================
-// Helpers storage
-// =====================
-const loadCats = () => {
-  try {
-    return JSON.parse(localStorage.getItem(CAT_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
-const loadProds = () => {
-  try {
-    return JSON.parse(localStorage.getItem(PROD_KEY) || "[]");
-  } catch {
-    return [];
-  }
-};
-const saveProds = (a) => {
-  localStorage.setItem(PROD_KEY, JSON.stringify(a));
-  syncToStorefront(a);
+const state = {
+  categories: [],
+  products: [],
 };
 
-// =====================
-// Map & sync ra site khách
-// (giống logic bên products.js)
-// =====================
-function mapAdminProdToPublic(p, cats) {
-  const CAT_SLUG_MAP = {
-    "Sáp vuốt tóc": "hair_wax",
-    "Gôm xịt": "hair_spray",
-    "Bột tạo phồng": "volumizing_powder",
+async function apiFetch(url, options = {}) {
+  options.headers = {
+    ...(options.headers || {}),
+    Accept: "application/json",
   };
+  options.credentials = "same-origin";
 
-  function toSlug(s) {
-    return String(s || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+  const res = await fetch(url, options);
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(text || `HTTP ${res.status}`);
   }
-
-  const catName = cats.find((c) => c.id === p.categoryId)?.name || "";
-  const category = CAT_SLUG_MAP[catName] || toSlug(catName) || "other";
-  const publicId = p.seedId || `admin-${p.id}`;
-
-  return {
-    id: publicId,
-    name: p.name,
-    brand: p.supplier || "",
-    category,
-    price: Number(p.price) || 0,
-    original_price: undefined,
-    image: p.image || "./assets/images/placeholder.png",
-    images: p.image ? [p.image] : [],
-    badge: "",
-    featured: false,
-    short_desc: p.desc || "",
-    long_desc: p.desc || "",
-    specs: { "Đơn vị": p.uom || "", Mã: p.code || "" },
-    unit: p.uom || "",
-    quantity: 1,
-    min_qty: 1,
-    max_qty: Math.max(1, Number(p.qty) || 1),
-    stock: Number(p.qty) || 0,
-    tags: [],
-    details: [],
-    usage: [],
-  };
-}
-
-function syncToStorefront(prods) {
-  const cats = loadCats();
-  const list = (prods || loadProds())
-    .filter((p) => (p.status || "selling") === "selling")
-    .map((p) => mapAdminProdToPublic(p, cats));
-
-  localStorage.setItem(PUBLIC_CATALOG_KEY, JSON.stringify(list));
-  localStorage.setItem(BUMP_KEY, String(Date.now()));
-}
-
-// =====================
-// Fill dropdown loại
-// =====================
-const filterCat = document.getElementById("filter-cat");
-function fillCategories() {
-  const cats = loadCats().filter((c) => c.active);
-  if (filterCat) {
-    filterCat.innerHTML =
-      `<option value="">— Tất cả loại —</option>` +
-      cats.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Phản hồi không hợp lệ từ máy chủ");
   }
 }
-fillCategories();
 
-// =====================
-// Render bảng giá
-// =====================
+async function fetchCategories() {
+  const data = await apiFetch(`${CAT_API}?action=list`);
+  return Array.isArray(data.categories) ? data.categories : [];
+}
+
+async function fetchProducts() {
+  const data = await apiFetch(`${API_BASE}?action=list`);
+  return Array.isArray(data.products) ? data.products : [];
+}
+
+function normalizeCategoryId(prod) {
+  return prod.category_id || prod.categoryId || "";
+}
+
+function getCategoryName(categoryId) {
+  return (
+    state.categories.find((c) => String(c.id) === String(categoryId))?.name ||
+    ""
+  );
+}
+
+function formatCurrency(value) {
+  return Math.round(Number(value || 0)).toLocaleString("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
+}
+
+function getSellPrice(product) {
+  const cost = Number(product.cost_price ?? 0);
+  const margin = Number(product.profit_margin ?? 0);
+  const salePrice = Number(product.sale_price ?? 0);
+  return salePrice || Math.round(cost * (1 + margin / 100));
+}
+
+function renderHeadlessMessage(message) {
+  const tbody = document.getElementById("pricing-body");
+  if (!tbody) return;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="9" style="text-align:center;color:#9aa3ad;padding:20px">
+        ${message}
+      </td>
+    </tr>`;
+}
+
 function renderPricing() {
   const q = (document.getElementById("q")?.value || "").toLowerCase().trim();
   const cat = document.getElementById("filter-cat")?.value || "";
-  const cats = loadCats();
-  const prods = loadProds();
-
-  const data = prods.filter((p) => {
-    if (q && !`${p.code} ${p.name}`.toLowerCase().includes(q)) return false;
-    if (cat && String(p.categoryId) !== cat) return false;
-    return true;
-  });
-
   const tbody = document.getElementById("pricing-body");
   if (!tbody) return;
 
-  if (!data.length) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="9" style="text-align:center;color:#9aa3ad;padding:20px">
-          Không có sản phẩm phù hợp
-        </td>
-      </tr>`;
+  const rows = state.products.filter((p) => {
+    const categoryName = getCategoryName(normalizeCategoryId(p));
+    const haystack =
+      `${p.sku || p.code || ""} ${p.name || ""} ${categoryName}`.toLowerCase();
+    if (q && !haystack.includes(q)) return false;
+    if (cat && String(normalizeCategoryId(p)) !== cat) return false;
+    return true;
+  });
+
+  if (!rows.length) {
+    renderHeadlessMessage("Không có sản phẩm phù hợp");
     return;
   }
 
-  tbody.innerHTML = data
-    .map((p, i) => {
-      const catName = cats.find((c) => c.id === p.categoryId)?.name || "";
+  tbody.innerHTML = rows
+    .map((p, index) => {
+      const categoryName = getCategoryName(normalizeCategoryId(p));
       const statusLabel =
         p.status === "selling"
           ? "Đang bán"
           : p.status === "stopped"
-          ? "Hết bán"
-          : "Ẩn";
+            ? "Hết bán"
+            : "Ẩn";
+      const cost = Number(p.cost_price ?? 0);
+      const margin = Number(p.profit_margin ?? 0);
+      const price = getSellPrice(p);
 
       return `
       <tr>
-        <td>${i + 1}</td>
-        <td>${p.code}</td>
-        <td>${p.name}</td>
-        <td>${catName}</td>
-        <td>${(p.cost || 0).toLocaleString("vi-VN")}</td>
+        <td>${index + 1}</td>
+        <td>${p.sku || p.code || ""}</td>
+        <td>${p.name || ""}</td>
+        <td>${categoryName}</td>
+        <td>${formatCurrency(cost)}</td>
         <td>
           <input
             type="number"
-            class="input margin-input"
+            class="input margin-input pricing-margin-input"
             data-id="${p.id}"
-            value="${p.margin ?? 0}"
+            value="${margin}"
             min="0"
-            style="width: 90px"
           />
         </td>
         <td>
           <span class="price-display" data-id="${p.id}">
-            ${(p.price || 0).toLocaleString("vi-VN")}
+            ${formatCurrency(price)}
           </span>
         </td>
         <td>${statusLabel}</td>
@@ -173,63 +136,133 @@ function renderPricing() {
     .join("");
 }
 
-renderPricing();
+async function loadData() {
+  try {
+    state.categories = await fetchCategories();
+  } catch (error) {
+    console.error("fetchCategories error", error);
+    state.categories = [];
+  }
 
-// =====================
-// Tìm kiếm / lọc
-// =====================
-document.getElementById("q")?.addEventListener("input", renderPricing);
-document
-  .getElementById("filter-cat")
-  ?.addEventListener("change", renderPricing);
+  try {
+    state.products = await fetchProducts();
+  } catch (error) {
+    console.error("fetchProducts error", error);
+    state.products = [];
+    renderHeadlessMessage("Không thể tải dữ liệu sản phẩm.");
+    return;
+  }
 
-// =====================
-// Khi đổi % lợi nhuận
-// -> auto tính lại giá bán (hiển thị)
-// =====================
-document.getElementById("pricing-body")?.addEventListener("input", (e) => {
-  const input = e.target.closest(".margin-input");
+  const filterCat = document.getElementById("filter-cat");
+  if (filterCat) {
+    filterCat.innerHTML =
+      `<option value="">— Tất cả loại —</option>` +
+      state.categories
+        .filter((c) => c.status === "active")
+        .map((c) => `<option value="${c.id}">${c.name}</option>`)
+        .join("");
+  }
+
+  renderPricing();
+}
+
+function normalizeProductForSave(product) {
+  return {
+    id: product.id,
+    code: product.sku || product.code || "",
+    name: product.name || "",
+    category_id: normalizeCategoryId(product),
+    description: product.description || product.desc || "",
+    unit: product.unit || product.uom || "",
+    quantity: product.quantity ?? product.qty ?? 0,
+    cost_price: Number(product.cost_price ?? product.cost ?? 0),
+    profit_margin: Number(product.profit_margin ?? product.margin ?? 0),
+    sale_price: Number(product.sale_price ?? product.price ?? 0),
+    supplier: product.supplier || "",
+    status: product.status || "selling",
+    image: product.image || null,
+  };
+}
+
+async function savePricingRow(productId, newMargin) {
+  const product = state.products.find(
+    (p) => String(p.id) === String(productId),
+  );
+  if (!product) throw new Error("Không tìm thấy sản phẩm");
+
+  const data = normalizeProductForSave(product);
+  data.profit_margin = Number(newMargin || 0);
+  data.sale_price = Math.round(
+    Number(data.cost_price || 0) * (1 + data.profit_margin / 100),
+  );
+
+  const formData = new FormData();
+  formData.append("action", "save");
+  formData.append("id", data.id);
+  formData.append("code", data.code);
+  formData.append("name", data.name);
+  formData.append("category_id", data.category_id);
+  formData.append("description", data.description);
+  formData.append("unit", data.unit);
+  formData.append("quantity", data.quantity);
+  formData.append("cost_price", data.cost_price);
+  formData.append("profit_margin", data.profit_margin);
+  formData.append("sale_price", data.sale_price);
+  formData.append("supplier", data.supplier);
+  formData.append("status", data.status);
+
+  const result = await apiFetch(API_BASE, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!result || !result.success) {
+    throw new Error(result?.message || "Lưu không thành công");
+  }
+
+  return result;
+}
+
+// Event bindings
+const qEl = document.getElementById("q");
+const filterCatEl = document.getElementById("filter-cat");
+const pricingBody = document.getElementById("pricing-body");
+
+qEl?.addEventListener("input", renderPricing);
+filterCatEl?.addEventListener("change", renderPricing);
+
+pricingBody?.addEventListener("input", (event) => {
+  const input = event.target.closest(".margin-input");
   if (!input) return;
 
-  const id = Number(input.dataset.id);
+  const id = input.dataset.id;
   const margin = Number(input.value || 0);
-  const prods = loadProds();
-  const p = prods.find((x) => x.id === id);
-  if (!p) return;
+  const product = state.products.find((p) => String(p.id) === String(id));
+  if (!product) return;
 
-  const cost = Number(p.cost || 0);
+  const cost = Number(product.cost_price ?? 0);
   const price = Math.round(cost * (1 + margin / 100));
-
   const span = document.querySelector(`.price-display[data-id="${id}"]`);
-  if (span) span.textContent = (price || 0).toLocaleString("vi-VN");
+  if (span) span.textContent = formatCurrency(price);
 });
 
-// =====================
-// Lưu 1 dòng giá bán
-// =====================
-document.getElementById("pricing-body")?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".btn-save-one");
+pricingBody?.addEventListener("click", async (event) => {
+  const btn = event.target.closest(".btn-save-one");
   if (!btn) return;
-  e.preventDefault();
+  event.preventDefault();
 
-  const id = Number(btn.dataset.id);
+  const id = btn.dataset.id;
   const marginInput = document.querySelector(`.margin-input[data-id="${id}"]`);
-  const priceSpan = document.querySelector(`.price-display[data-id="${id}"]`);
-  if (!marginInput || !priceSpan) return;
+  if (!marginInput) return;
 
   const margin = Number(marginInput.value || 0);
-
-  // lấy số từ text (đã format 1.000.000) -> về number
-  const raw = priceSpan.textContent.replace(/[^\d]/g, "");
-  const price = Number(raw || 0);
-
-  const prods = loadProds();
-  const i = prods.findIndex((x) => x.id === id);
-  if (i < 0) return;
-
-  prods[i].margin = margin;
-  prods[i].price = price;
-
-  saveProds(prods);
-  alert("Đã cập nhật giá bán sản phẩm.");
+  try {
+    await savePricingRow(id, margin);
+    await loadData();
+    alert("Đã cập nhật giá bán sản phẩm.");
+  } catch (error) {
+    alert(error.message || "Cập nhật giá bán thất bại");
+  }
 });
+
+loadData();

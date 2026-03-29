@@ -27,6 +27,16 @@
     return Number(n || 0).toLocaleString("vi-VN") + "₫";
   }
 
+  function getAppRoot() {
+    var script = document.currentScript || document.scripts[document.scripts.length - 1];
+    if (!script || !script.src) return new URL("./", location.href);
+    var url = new URL(script.src, location.origin);
+    url.pathname = url.pathname.replace(/\/assets\/js\/[^/]+$/, "/");
+    return url;
+  }
+
+  const APP_ROOT = getAppRoot();
+
   // Lấy param id
   const usp = new URLSearchParams(location.search);
   const routeId = usp.get("id") || "";
@@ -85,6 +95,62 @@
   const root = document.getElementById("pd-root");
   const bcName = document.getElementById("bc-name");
 
+  // Notification System
+  function showNotification(message, type = 'info') {
+    // Chỉ show trên trang product detail, không show trên cart.php
+    const isCartPage = /\/cart\.php(?:$|[?#])/i.test(location.pathname);
+    if (isCartPage) return;
+    
+    // type: 'success', 'error', 'warning', 'info'
+    let notifContainer = document.getElementById('pd-notification-container');
+    if (!notifContainer) {
+      notifContainer = document.createElement('div');
+      notifContainer.id = 'pd-notification-container';
+      notifContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; max-width: 400px;';
+      document.body.appendChild(notifContainer);
+    }
+
+    const notif = document.createElement('div');
+    const bgColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8';
+    const textColor = type === 'warning' ? '#000' : '#fff';
+    
+    notif.style.cssText = `
+      background: ${bgColor};
+      color: ${textColor};
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      animation: slideInRight 0.3s ease-out;
+      font-size: 14px;
+      line-height: 1.4;
+    `;
+    notif.textContent = message;
+    notifContainer.appendChild(notif);
+
+    setTimeout(() => {
+      notif.style.animation = 'slideOutRight 0.3s ease-out forwards';
+      setTimeout(() => notif.remove(), 300);
+    }, 4000);
+  }
+
+  // Thêm CSS animation nếu chưa có
+  if (!document.getElementById('pd-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'pd-notification-styles';
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(450px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(450px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   function renderSpecs(p) {
     const specs = p.specs || {};
     const keys = Object.keys(specs);
@@ -119,6 +185,8 @@
 
     // Badge
     const badge = String(p.badge || "").toLowerCase();
+    const stockRaw = Number(p.quantity ?? p.stock);
+    const stock = Number.isFinite(stockRaw) ? Math.max(0, Math.floor(stockRaw)) : null;
     const badgeHtml =
       badge === "sale"
         ? '<span class="pd-badge sale">Sale</span>'
@@ -174,9 +242,9 @@
         ${renderSpecs(p)}
 
         <div class="pd-actions">
-          <input id="qty" type="number" min="1" value="1" class="form-control pd-qty" style="width:110px">
+          <input id="qty" type="number" min="1" ${stock !== null ? `max="${stock}"` : ""} value="1" class="form-control pd-qty" style="width:110px">
           <button id="btnAdd" class="btn btn-primary"
-            ${badge === "oos" || badge === "out_of_stock" ? "disabled" : ""}>
+            ${badge === "oos" || badge === "out_of_stock" || stock === 0 ? "disabled" : ""}>
             <i class="fas fa-cart-plus"></i> Thêm vào giỏ
           </button>
         </div>
@@ -205,10 +273,18 @@
     document.getElementById("btnAdd")?.addEventListener("click", () => {
       // ✅ Kiểm tra đăng nhập
       if (!window.AUTH?.loggedIn) {
-        alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
+        showNotification("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!", 'error');
         const back = location.pathname + location.search + location.hash;
-        location.href =
-          "../../account/login.html?redirect=" + encodeURIComponent(back);
+        const loginUrl = window.AUTH?.LOGIN_URL || (function () {
+          const p = (location.pathname || "").toLowerCase();
+          if (p.indexOf("/account/") !== -1) return "login.php";
+          if (p.indexOf("/product/pages/") !== -1) return "../../account/login.php";
+          if (p.indexOf("/product/") !== -1 || p.indexOf("/news_section/") !== -1) return "../account/login.php";
+          return "./account/login.php";
+        })();
+        setTimeout(() => {
+          location.href = loginUrl + "?redirect=" + encodeURIComponent(back);
+        }, 1500);
         return;
       }
 
@@ -217,9 +293,41 @@
         Number(document.getElementById("qty").value) || 1
       );
 
+      const currentInCart = window.SVStore?.getCartItemQty?.(p.id) || 0;
+      const maxStock = window.SVStore?.getProductStockById?.(p.id);
+      console.log('[ProductDetail] add button: stock=' + maxStock + ', currentInCart=' + currentInCart + ', requesting=' + qty);
+      
+      if (Number.isFinite(maxStock)) {
+        const remain = Math.max(0, maxStock - currentInCart);
+        if (remain <= 0) {
+          showNotification("Bạn đã thêm tối đa theo tồn kho của sản phẩm này.\nTồn kho còn: " + maxStock + " | Bạn đã có: " + currentInCart, 'warning');
+          return;
+        }
+        if (qty > remain) {
+          showNotification("Không thể thêm " + qty + " cái.\nTồn kho còn: " + remain + " | Bạn đã có: " + currentInCart, 'warning');
+          return;
+        }
+      }
+
       // Gọi API giỏ hàng (đã có auth check bên trong)
       if (window.SVStore?.addToCart) {
         window.SVStore.addToCart(p.id, qty);
+      }
+
+      const op = window.SVStore?.getLastCartOp?.();
+      console.log('[ProductDetail] after add, op=', op);
+      
+      if (op && op.addedQty > 0) {
+        // Success: items were added
+        if (op.message) {
+          showNotification(op.message, 'success');
+        }
+      } else if (op && op.addedQty <= 0) {
+        // Error: nothing was added
+        if (op.message) {
+          showNotification(op.message, 'error');
+        }
+        return;
       }
 
       // Cập nhật badge header
@@ -248,9 +356,10 @@
         .map(
           (r) => `
         <div class="col-6 col-md-4 related-col">
-          <a href="../../sanpham/pages/product_detail.html?id=${encodeURIComponent(
-            r.id
-          )}" class="related-card text-reset">
+          <a href="${new URL(
+            `../Product/pages/product_detail.php?id=${encodeURIComponent(r.id)}`,
+            APP_ROOT
+          ).pathname}" class="related-card text-reset">
             <div class="img-wrap">
               <img src="${r.image || ""}" alt="${escapeHtml(r.name || "")}">
             </div>
@@ -299,3 +408,4 @@
     window.SVUI?.updateCartCount?.()
   );
 })();
+

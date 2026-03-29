@@ -1,6 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
 :root{
-    --font: "Roboto", sans-serif;
+  --font: "Segoe UI", Tahoma, Arial, sans-serif;
     --color-one:#5CB874;
     --color-text:#999999;
     --color-two:#FFFFFF;
@@ -19,7 +18,7 @@ max-width: 1200px;
   padding: 0 16px;
 }
 html, body {
-  font-family: 'Roboto', sans-serif;
+  font-family: var(--font);
   font-size: 12px;
   line-height: 1.6;
 }html {

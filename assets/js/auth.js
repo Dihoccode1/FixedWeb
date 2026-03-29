@@ -18,6 +18,49 @@
     return Array.prototype.slice.call((root || d).querySelectorAll(sel));
   }
 
+  function getAppRootPath() {
+    try {
+      var script = d.currentScript;
+      if (!script) {
+        var scripts = d.getElementsByTagName("script");
+        script = scripts[scripts.length - 1] || null;
+      }
+      if (script && script.src) {
+        var scriptUrl = new URL(script.src, w.location.origin);
+        var path = (scriptUrl.pathname || "/").replace(/\\/g, "/");
+        var marker = "/assets/js/";
+        var idx = path.toLowerCase().indexOf(marker);
+        if (idx !== -1) {
+          return path.slice(0, idx + 1);
+        }
+      }
+    } catch (e) {}
+
+    var pathname = (w.location.pathname || "/").replace(/\\/g, "/");
+    if (pathname.indexOf("/account/") !== -1) {
+      return pathname.replace(/\/account\/.*$/i, "/");
+    }
+    if (pathname.indexOf("/product/pages/") !== -1) {
+      return pathname.replace(/\/product\/pages\/.*$/i, "/");
+    }
+    if (pathname.indexOf("/product/") !== -1) {
+      return pathname.replace(/\/product\/.*$/i, "/");
+    }
+    if (pathname.indexOf("/news_section/") !== -1) {
+      return pathname.replace(/\/news_section\/.*$/i, "/");
+    }
+    return pathname.replace(/\/[^/]*$/, "/");
+  }
+
+  function getAccountUrl(page) {
+    var cleanPage = String(page || "").replace(/^\/+/, "");
+    var pathname = (w.location.pathname || "/").replace(/\\/g, "/").toLowerCase();
+    if (pathname.indexOf("/account/") !== -1) return cleanPage;
+    if (pathname.indexOf("/product/pages/") !== -1) return "../../account/" + cleanPage;
+    if (pathname.indexOf("/product/") !== -1 || pathname.indexOf("/news_section/") !== -1) return "../account/" + cleanPage;
+    return "./account/" + cleanPage;
+  }
+
   function makeBackParam() {
     try {
       var href = w.location.pathname + w.location.search + w.location.hash;
@@ -30,7 +73,7 @@
   // 💡 SỬA: trỏ đúng trang login của bạn
   function redirectToLogin() {
     const back = makeBackParam();
-    w.location.href = "../../account/login.html" + (back ? "?redirect=" + back : "");
+    w.location.href = getAccountUrl("login.php") + (back ? "?redirect=" + back : "");
   }
 
   function escapeHtml(s) {
@@ -63,6 +106,40 @@
       return null;
     }
   }
+
+  function getCookie(name) {
+    try {
+      return document.cookie
+        .split(';')
+        .map(function (v) {
+          return v.trim().split('=');
+        })
+        .filter(function (parts) {
+          return parts[0] === name;
+        })
+        .map(function (parts) {
+          return decodeURIComponent(parts[1] || '');
+        })[0] || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function getCookieAuth() {
+    var email = getCookie('SV_AUTH_EMAIL');
+    if (!email) return null;
+    return {
+      name: getCookie('SV_AUTH_NAME') || '',
+      email: email,
+    };
+  }
+
+  function getServerCartCount() {
+    var value = getCookie('SV_CART_COUNT');
+    var num = parseInt(value, 10);
+    return Number.isFinite(num) ? num : 0;
+  }
+
   function setAuth(obj) {
     if (obj) localStorage.setItem(LS_AUTH, JSON.stringify(obj));
     else localStorage.removeItem(LS_AUTH);
@@ -111,16 +188,35 @@
 
     check: function () {
       const current = getAuth();
+      const serverAuth = w.SERVER_AUTH_STATE && w.SERVER_AUTH_STATE.loggedIn ? w.SERVER_AUTH_STATE : null;
+      const cookieAuth = getCookieAuth();
 
-      AUTH.loggedIn = !!current;
-      AUTH.user = current ? { name: current.name, email: current.email } : null;
+      if (current) {
+        AUTH.loggedIn = true;
+        AUTH.user = current ? { name: current.name, email: current.email } : null;
+      } else if (serverAuth) {
+        AUTH.loggedIn = true;
+        AUTH.user = serverAuth.user
+          ? { name: serverAuth.user.name || '', email: serverAuth.user.email || '' }
+          : null;
+      } else if (cookieAuth) {
+        AUTH.loggedIn = true;
+        AUTH.user = { name: cookieAuth.name || '', email: cookieAuth.email || '' };
+      } else {
+        AUTH.loggedIn = false;
+        AUTH.user = null;
+      }
+
       AUTH.ready = true;
+      AUTH.LOGIN_URL = getAccountUrl("login.php");
+      AUTH.REGISTER_URL = getAccountUrl("register.php");
 
       // 💡 nếu đang login bằng demo nhưng bảng user không có thì chèn vào
       if (AUTH.user && AUTH.user.email === DEMO_EMAIL) {
         ensureDemoUserExists();
       }
 
+      w.SERVER_CART_COUNT = getServerCartCount();
       AUTH.updateAuthUI();
 
       try {
@@ -167,8 +263,10 @@
             escapeHtml((AUTH.user && AUTH.user.name) || "") +
             '</strong> · <a href="#" data-logout>Đăng xuất</a>';
         } else {
+          var loginHref = getAccountUrl("login.php");
+          var registerHref = getAccountUrl("register.php");
           chip.innerHTML =
-            '<a href="../../account/login.html">Đăng nhập</a> / <a href="../../account/register.html">Đăng ký</a>';
+            '<a href="' + loginHref + '">Đăng nhập</a> / <a href="' + registerHref + '">Đăng ký</a>';
         }
       }
     },
@@ -252,6 +350,10 @@
       try {
         sessionStorage.removeItem(LOGIN_INTENT_FLAG);
       } catch (_) {}
+      var logoutUrl = getAccountUrl('logout.php');
+      if (logoutUrl) {
+        window.location.href = logoutUrl;
+      }
     },
   };
 
@@ -313,8 +415,15 @@
   // ======================= EXPORT & INIT =======================
   w.AUTH = AUTH;
 
-  d.addEventListener("DOMContentLoaded", function () {
+  function initAuth() {
     installGuards();
     AUTH.check();
-  });
+  }
+
+  if (d.readyState === "complete" || d.readyState === "interactive") {
+    initAuth();
+  } else {
+    d.addEventListener("DOMContentLoaded", initAuth);
+  }
 })(window, document);
+

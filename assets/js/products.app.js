@@ -4,6 +4,62 @@
   // ====== Config ======
   const PAGE_SIZE = 8;
 
+  // ====== Notification System ======
+  function showNotification(message, type = 'info') {
+    // Chỉ show trên trang product.php, không show trên cart.php
+    const isCartPage = /\/cart\.php(?:$|[?#])/i.test(location.pathname);
+    if (isCartPage) return;
+    
+    // type: 'success', 'error', 'warning', 'info'
+    let notifContainer = document.getElementById('products-notification-container');
+    if (!notifContainer) {
+      notifContainer = document.createElement('div');
+      notifContainer.id = 'products-notification-container';
+      notifContainer.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; max-width: 400px;';
+      document.body.appendChild(notifContainer);
+    }
+
+    const notif = document.createElement('div');
+    const bgColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8';
+    const textColor = type === 'warning' ? '#000' : '#fff';
+    
+    notif.style.cssText = `
+      background: ${bgColor};
+      color: ${textColor};
+      padding: 14px 18px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      animation: slideInRight 0.3s ease-out;
+      font-size: 14px;
+      line-height: 1.4;
+    `;
+    notif.textContent = message;
+    notifContainer.appendChild(notif);
+
+    setTimeout(() => {
+      notif.style.animation = 'slideOutRight 0.3s ease-out forwards';
+      setTimeout(() => notif.remove(), 300);
+    }, 4000);
+  }
+
+  // Thêm CSS animation nếu chưa có
+  if (!document.getElementById('products-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'products-notification-styles';
+    style.textContent = `
+      @keyframes slideInRight {
+        from { transform: translateX(450px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(450px); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // ====== Utils DOM & Format ======
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -35,13 +91,36 @@
 
   // ====== Data ======
   function getAllProducts() {
+    if (window.SVStore?.getAllProducts && typeof window.SVStore.getAllProducts === "function") {
+      try {
+        const products = window.SVStore.getAllProducts();
+        if (Array.isArray(products)) return products;
+      } catch (err) {
+        console.warn("Error loading products from SVStore:", err);
+      }
+    }
     return Array.isArray(window.SV_PRODUCT_SEED) ? window.SV_PRODUCT_SEED : [];
   }
 
   // Badge giỏ ở header
   function updateCartBadge() {
     const el = document.querySelector("#cartCount, .cart-count");
-    if (el && window.SVStore?.count) el.textContent = SVStore.count();
+    if (!el) return;
+    const isCartPage = /\/cart\.php(?:$|[?#])/i.test(location.pathname + location.search);
+    const cartLooksEmpty = !!document.querySelector('.alert-warning') && document.querySelectorAll('.cart-item-row').length === 0;
+    let count = 0;
+
+    if (typeof window.SERVER_CART_COUNT === 'number') {
+      count = Math.max(0, Number(window.SERVER_CART_COUNT) || 0);
+    } else if (window.SVStore?.count) {
+      count = SVStore.count();
+    }
+
+    if (isCartPage && cartLooksEmpty) {
+      count = 0;
+      window.SERVER_CART_COUNT = 0;
+    }
+    el.textContent = count;
   }
 
   // ====== UI build ======
@@ -68,8 +147,29 @@
     );
   }
 
+  function getAppRoot() {
+    var script = document.currentScript || document.scripts[document.scripts.length - 1];
+    if (!script || !script.src) return new URL("./", location.href);
+    var url = new URL(script.src, location.origin);
+    url.pathname = url.pathname.replace(/\/assets\/js\/[^/]+$/, "/");
+    return url;
+  }
+
+  const APP_ROOT = getAppRoot();
+  function normalizeAssetUrl(src) {
+    if (!src) return src;
+    if (/^(?:https?:)?\/\//.test(src) || src.startsWith("/")) return src;
+    try {
+      return new URL(src, APP_ROOT).pathname;
+    } catch (e) {
+      return src;
+    }
+  }
   function productDetailUrl(p) {
-    return `../../sanpham/pages/product_detail.html?id=${encodeURIComponent(p.id)}`;
+    return new URL(
+      `../Product/pages/product_detail.php?id=${encodeURIComponent(p.id)}`,
+      APP_ROOT
+    ).pathname;
   }
 
   function itemHTML(p) {
@@ -87,7 +187,7 @@
           <a href="${productDetailUrl(p)}">
             <div class="product-image">
               ${badgeHTML(p.badge)}
-              <img src="${p.image}" alt="${p.name}">
+              <img src="${normalizeAssetUrl(p.image)}" alt="${p.name}">
             </div>
             <div class="product-name">${p.name}</div>
             <div class="product-price">
@@ -119,7 +219,14 @@
     let result = all;
 
     if (q) {
-      result = result.filter((p) => stripVN(p.name).includes(qNorm));
+      result = result.filter((p) => {
+        // Chuẩn hóa tên: bỏ dấu, thường hóa, loại ký tự đặc biệt, trim
+        let nameNorm = stripVN(p.name || '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!nameNorm) return false;
+        // Tách từ bằng khoảng trắng
+        const words = nameNorm.split(' ');
+        return words.some(word => word && word.startsWith(qNorm));
+      });
     }
     if (category !== "all") {
       result = result.filter(
@@ -260,10 +367,18 @@
 
         // ✅ KIỂM TRA ĐĂNG NHẬP
         if (!window.AUTH?.loggedIn) {
-          alert("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!");
+          showNotification("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!", 'error');
           const back = location.pathname + location.search + location.hash;
-          location.href =
-            "../../account/login.html?redirect=" + encodeURIComponent(back);
+          const loginUrl = window.AUTH?.LOGIN_URL || (function () {
+            const p = (location.pathname || "").toLowerCase();
+            if (p.indexOf("/account/") !== -1) return "login.php";
+            if (p.indexOf("/product/pages/") !== -1) return "../../account/login.php";
+            if (p.indexOf("/product/") !== -1 || p.indexOf("/news_section/") !== -1) return "../account/login.php";
+            return "./account/login.php";
+          })();
+          setTimeout(() => {
+            location.href = loginUrl + "?redirect=" + encodeURIComponent(back);
+          }, 1500);
           return;
         }
 
@@ -281,6 +396,23 @@
           window.SVStore.addToCart(id, qty);
         }
 
+        const op = window.SVStore?.getLastCartOp?.();
+        if (op && op.addedQty > 0) {
+          // Success: items were added
+          if (op.message) {
+            showNotification(op.message, 'success');
+          }
+        } else if (op && op.addedQty <= 0) {
+          // Error: nothing was added
+          if (op.message) {
+            showNotification(op.message, 'error');
+          }
+          btn.dataset.busy = "";
+          updateCartBadge();
+          window.SVUI?.updateCartCount?.();
+          return;
+        }
+
         updateCartBadge();
         window.SVUI?.updateCartCount?.();
 
@@ -296,8 +428,13 @@
       true
     );
 
-    // đồng bộ badge nếu giỏ đổi từ tab khác
+    // đồng bộ badge nếu giỏ đổi từ tab khác và tải lại danh sách khi Admin cập nhật catalog
     window.addEventListener("storage", (e) => {
+      if (e.key === "catalog.bump") {
+        const fresh = getAllProducts();
+        const page = Number(getQuery("page", "1")) || 1;
+        render(fresh, page, PAGE_SIZE);
+      }
       if (e.key && e.key.startsWith("sv_cart_user_")) updateCartBadge();
     });
 
@@ -311,3 +448,4 @@
     document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+

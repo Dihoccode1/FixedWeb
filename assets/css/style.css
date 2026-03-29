@@ -12,16 +12,33 @@
   padding: 10px 0; /* gộp padding */
 }
 .topbar > .container {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+  gap: 10px;
 }
 .topbar-right {
-  margin-left: auto;
-  display: flex;
+  margin-left: auto !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center;
   gap: 12px;
 }
+.topbar-right > .welcome-user {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.topbar-right .welcome-user {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+}
 .topbar-right a {
+  flex: 0 0 auto !important;
   margin-left: 10px;
   padding: 5px 12px;
   font-size: 13px;
@@ -679,11 +696,8 @@
   }
 
   /* Nhắm mục tiêu vào khối chứa văn bản Chào mừng */
-  /* Nếu bạn có class cho khối chứa toàn bộ chữ, hãy dùng class đó thay vì div:first-child */
-  .topbar > .container div:first-child,
-  .topbar > .container span,
-  .topbar > .container p {
-    /* Ép buộc mọi văn bản trong khu vực này phải nhỏ và nằm trên 1 dòng */
+  .topbar-right > .welcome-user,
+  .topbar-right > .welcome-user * {
     display: inline !important;
     font-size: 13px !important;
     line-height: 1.2 !important;
@@ -1199,6 +1213,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
+  line-clamp: 2;
   -webkit-line-clamp: 2; /* Giới hạn chỉ hiển thị 2 dòng */
   -webkit-box-orient: vertical;
   line-height: 1.4;
@@ -1215,7 +1230,7 @@
 
 .product-price {
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 500;
   color: #f00;
 }
 
@@ -1402,9 +1417,17 @@
 .topbar-right {
   margin-left: auto !important; /* đẩy cả nhóm sang phải */
   display: flex !important;
+  flex-wrap: wrap !important;
   align-items: center;
   gap: 12px;
   justify-content: flex-end;
+}
+.topbar-right > .welcome-user {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 /* Mobile: override lại rule cũ space-between */
@@ -1486,6 +1509,59 @@
   }
 
   /* Icon: nằm TRÁI, giữa theo chiều dọc ô input */
+}
+
+/* ===== TOPBAR STABLE OVERRIDE ===== */
+.topbar > .container {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+}
+.topbar-right {
+  margin-left: auto !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+.topbar-right > .welcome-user {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.topbar-right > .welcome-user span,
+.topbar-right > .welcome-user .user-name,
+.topbar-right > .welcome-user .welcome-message {
+  display: inline !important;
+  white-space: nowrap !important;
+}
+.topbar-right > a {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+  margin-left: 10px !important;
+}
+@media (max-width: 767.98px) {
+  .topbar > .container {
+    justify-content: space-between !important;
+  }
+  .topbar-right {
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+  .topbar-right > .welcome-user {
+    max-width: calc(100% - 180px) !important;
+  }
+  .topbar-right > a {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    min-width: auto !important;
+  }
+}
   .sv-field.sv-icon i {
     grid-row: 2;
     align-self: center; /* giữa theo chiều dọc */
@@ -1500,7 +1576,6 @@
     font-size: 14px;
     color: #9ca3af;
   }
-}
 
 /* Mobile nhỏ hơn nữa: giảm nhẹ kích thước */
 @media (max-width: 576px) {
@@ -1532,7 +1607,7 @@
     background-position: 12px 50% !important; /* trái 12px, giữa theo chiều dọc */
     background-size: 16px 16px !important;
     background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa0a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") !important;
+<svg width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa0a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") !important;
   }
 }
 
@@ -1775,4 +1850,44 @@
   font-size: 16px !important;
   color: #9aa3ad !important;
   pointer-events: none !important;
+}
+
+/* ===== FINAL AUTH BUTTON FIX ===== */
+.topbar .topbar-right {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+}
+
+.topbar .topbar-right > a {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  margin-left: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+.topbar .topbar-right > .welcome-user {
+  gap: 6px !important;
+  min-width: 0 !important;
+}
+
+.topbar .topbar-right > .welcome-user .welcome-message,
+.topbar .topbar-right > .welcome-user .user-name {
+  white-space: nowrap !important;
+}
+
+@media (max-width: 767.98px) {
+  .topbar .topbar-right {
+    gap: 6px !important;
+  }
+
+  .topbar .topbar-right > a {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.1 !important;
+  }
 }

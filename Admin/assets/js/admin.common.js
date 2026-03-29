@@ -8,7 +8,7 @@
 
   // Nếu không có hoặc không phải admin -> về login
   if (!u || u.role !== "admin") {
-    location.replace("./login.html");
+    location.replace("./login.php");
     return;
   }
 
@@ -90,7 +90,7 @@
         // localStorage.removeItem("AUTH_TOKEN");
 
         const url =
-          "./login.html?msg=" + encodeURIComponent(reason);
+          "./login.php?msg=" + encodeURIComponent(reason);
         location.replace(url);
       }
     } catch (e) {
@@ -117,8 +117,9 @@
         e.preventDefault();
         sessionStorage.removeItem("session.user");
         // localStorage.removeItem("session.user"); // nếu có lưu
-        location.href = "./login.html";
+        location.href = "./login.php";
       });
     }
   });
 })();
+

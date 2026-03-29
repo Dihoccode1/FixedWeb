@@ -4666,7 +4666,7 @@
       get: function () {
         if (!IS_DOM) return;
         const container = DOCUMENT.createElement('div');
-        container.innerHTML = val.html;
+        container.innerHTML = val.php;
         return container.children;
       }
     });
@@ -6198,3 +6198,4 @@
   bunker(bootstrap);
 
 }());
+

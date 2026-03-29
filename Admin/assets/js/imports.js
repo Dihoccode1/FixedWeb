@@ -1,27 +1,48 @@
 /* ============================================================
-   IMPORTS.JS — Quản lý phiếu nhập hàng
-   - Luôn có dữ liệu mẫu mặc định, kể cả khi localStorage trống
-   - Dữ liệu thật của bạn vẫn lưu ở localStorage như bình thường
+   IMPORTS.JS — Quản lý phiếu nhập hàng (100% API Database)
    ============================================================ */
 
-(function () {
-  // ===== Storage Keys =====
-  const PROD_KEY = "admin.products";
-  const RECEIPT_KEY = "admin.inventoryReceipts";
-  const CAT_KEY = "admin.categories";
-  const TX_KEY = "admin.stock";
-  const PUBLIC_CATALOG_KEY = "sv_products_v1";
+document.addEventListener("DOMContentLoaded", function () {
+  // Biến toàn cục lưu dữ liệu từ API để dùng cho các nút Xem/Sửa
+  window.DB_RECEIPTS = [];
+
+  const PROD_KEY = "admin.products"; // Tạm thời vẫn giữ product ở LocalStorage nếu bác chưa có API Product
 
   // ===== Helpers =====
   const $ = (s, ctx = document) => ctx.querySelector(s);
-  const $$ = (s, ctx = document) => Array.from(ctx.querySelectorAll(s));
   const money = (x) => (Number(x) || 0).toLocaleString("vi-VN");
+  const moneyInput = (x) => {
+    const n = Number(x) || 0;
+    if (Number.isInteger(n)) return n.toLocaleString("vi-VN");
+    return n.toLocaleString("vi-VN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
+  const parseMoneyInput = (raw) => {
+    const s = String(raw || "").trim();
+    if (!s) return 0;
+
+    // Keep only digits, separators and minus then normalize decimal separator.
+    const cleaned = s.replace(/[^0-9,.-]/g, "");
+    const hasComma = cleaned.includes(",");
+    const hasDot = cleaned.includes(".");
+
+    if (hasComma && hasDot) {
+      // vi-VN style: 1.234,56
+      return Number(cleaned.replace(/\./g, "").replace(",", ".")) || 0;
+    }
+    if (hasComma) {
+      const parts = cleaned.split(",");
+      if (parts.length === 2 && parts[1].length <= 2) {
+        return Number(parts[0].replace(/\./g, "") + "." + parts[1]) || 0;
+      }
+      return Number(cleaned.replace(/,/g, "")) || 0;
+    }
+
+    return Number(cleaned.replace(/,/g, "")) || 0;
+  };
   const today = () => new Date().toISOString().slice(0, 10);
-  const genId = (p = "PN") =>
-    p +
-    "_" +
-    Math.random().toString(36).slice(2, 8) +
-    Date.now().toString(36).slice(-4);
   const nextCode = () => {
     const d = new Date();
     const y = d.getFullYear();
@@ -30,316 +51,91 @@
     const seq = String(Math.floor(Math.random() * 1000)).padStart(3, "0");
     return `PN-${y}${m}${day}-${seq}`;
   };
-  function jget(k, d) {
-    try {
-      return JSON.parse(localStorage.getItem(k) || JSON.stringify(d));
-    } catch {
-      return d;
-    }
-  }
-  function jset(k, v) {
-    localStorage.setItem(k, JSON.stringify(v));
-  }
   function esc(s) {
     return String(s).replace(
       /[&<>"]/g,
-      (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] || c)
+      (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] || c,
     );
   }
-  const ping = (k) => {
+
+  // ===== Products Repo (Tạm dùng LocalStorage và API) =====
+  const PRODUCT_API = "./api/products.php?action=list";
+  window.ALL_PRODUCTS = [];
+
+  async function loadProducts() {
     try {
-      localStorage.setItem(k, String(Date.now()));
-    } catch {}
-  };
-
-  // ===== Suppliers mẫu & đoán NCC theo tên sản phẩm =====
-  const SAMPLE_SUPPLIERS = [
-    "Davines",
-    "TIGI",
-    "Kevin Murphy",
-    "Butterfly Shadow",
-    "Luxurious",
-    "Apestomen",
-    "Hanz de Fuko",
-  ];
-  function guessSupplierFromName(name) {
-    const lower = String(name || "").toLowerCase();
-    for (const sup of SAMPLE_SUPPLIERS) {
-      if (lower.includes(sup.toLowerCase())) return sup;
-    }
-    return "Nhà cung cấp khác";
-  }
-
-  // ===== Tính tổng trên các dòng =====
-  function calcTotals(items) {
-    const totalCost = (items || []).reduce(
-      (s, it) => s + Number(it.costPrice || 0) * Number(it.quantity || 0),
-      0
-    );
-    const totalQty = (items || []).reduce(
-      (s, it) => s + Number(it.quantity || 0),
-      0
-    );
-    return { totalCost, totalQty };
-  }
-
-  // ===== Build bộ PHIẾU MẪU (không phụ thuộc localStorage) =====
-  function buildDefaultReceipts() {
-    const year = new Date().getFullYear();
-    const baseDate = new Date(year, 9, 28); // 28/10
-
-    const samples = [
-      {
-        code: "SP001",
-        name: "Gôm xịt tóc Davines Extra Strong Hairspray",
-        cost: 180000,
-        qty: 30,
-      },
-      {
-        code: "SP002",
-        name: "Gôm xịt tóc TIGI Bed Head Masterpiece",
-        cost: 170000,
-        qty: 20,
-      },
-      {
-        code: "SP003",
-        name: "Sáp vuốt tóc Kevin Murphy Free Hold",
-        cost: 280000,
-        qty: 15,
-      },
-      {
-        code: "SP004",
-        name: "Keo xịt tóc Butterfly Shadow Super Hard",
-        cost: 90000,
-        qty: 40,
-      },
-      {
-        code: "SP005",
-        name: "Sáp Luxurious Clay Wax",
-        cost: 120000,
-        qty: 25,
-      },
-      {
-        code: "SP006",
-        name: "Sáp Apestomen Nitro Wax",
-        cost: 110000,
-        qty: 18,
-      },
-      {
-        code: "SP007",
-        name: "Sáp Hanz de Fuko Claymation",
-        cost: 260000,
-        qty: 12,
-      },
-      {
-        code: "SP008",
-        name: "Sáp vuốt tóc Davines Strong Hold Cream",
-        cost: 230000,
-        qty: 14,
-      },
-    ];
-
-    const receipts = [];
-    for (let i = 0; i < samples.length; i++) {
-      const s = samples[i];
-
-      // cứ 3 phiếu thì +2 ngày (28/10, 30/10, 01/11,...)
-      const group = Math.floor(i / 3);
-      const d = new Date(baseDate);
-      d.setDate(baseDate.getDate() + group * 2);
-      const dateIso = d.toISOString().slice(0, 10);
-
-      const item = {
-        productId: undefined, // demo → không cộng tồn kho nữa
-        productCode: s.code,
-        productName: s.name,
-        lotCode: `SEED-${s.code}-${i + 1}`,
-        costPrice: s.cost,
-        quantity: s.qty,
-      };
-      const totals = calcTotals([item]);
-
-      receipts.push({
-        id: `PN_DEMO_${i + 1}`,
-        code: `PN-${dateIso.replace(/-/g, "")}-${String(i + 1).padStart(
-          3,
-          "0"
-        )}`,
-        date: dateIso,
-        supplier: guessSupplierFromName(s.name),
-        note: `Phiếu nhập mẫu cho ${s.name}`,
-        status: "completed",
-        items: [item],
-        totalCost: totals.totalCost,
-        totalQty: totals.totalQty,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        completedAt: Date.now(),
-      });
-    }
-    return receipts;
-  }
-
-  // ===== Cache receipts =====
-  let _RECEIPTS_CACHE = null;
-  function receiptsRead() {
-    if (!_RECEIPTS_CACHE) {
-      let stored = jget(RECEIPT_KEY, []);
-      // Nếu localStorage chưa có gì → nạp bộ mẫu và lưu luôn
-      if (!stored || !stored.length) {
-        stored = buildDefaultReceipts();
-        jset(RECEIPT_KEY, stored);
+      const res = await fetch(PRODUCT_API);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.products)) {
+        window.ALL_PRODUCTS = data.products;
+        localStorage.setItem(PROD_KEY, JSON.stringify(data.products));
+      } else {
+        window.ALL_PRODUCTS = listProducts();
       }
-      _RECEIPTS_CACHE = stored.sort(
-        (a, b) => new Date(b.date) - new Date(a.date)
-      );
+    } catch {
+      window.ALL_PRODUCTS = listProducts();
     }
-    return _RECEIPTS_CACHE;
-  }
-  function receiptsWrite(arr) {
-    _RECEIPTS_CACHE = (arr || []).sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
-    jset(RECEIPT_KEY, _RECEIPTS_CACHE);
-    ping("receipts.bump");
   }
 
-  // ===== Products Repo =====
-  function listProducts() {
-    return jget(PROD_KEY, []);
+  async function syncInventoryCaches() {
+    try {
+      const res = await fetch("./api/inventory.php?action=all-data");
+      const data = await res.json();
+      if (!res.ok || !data.success) return;
+
+      localStorage.setItem(
+        "admin.products",
+        JSON.stringify(data.products || []),
+      );
+      localStorage.setItem(
+        "admin.categories",
+        JSON.stringify(data.categories || []),
+      );
+      localStorage.setItem(
+        "admin.stock",
+        JSON.stringify(data.transactions || []),
+      );
+
+      // Cập nhật danh sách sản phẩm đang dùng trong màn hình hiện tại
+      window.ALL_PRODUCTS = data.products || window.ALL_PRODUCTS;
+    } catch (_) {
+      // Không chặn flow hoàn thành phiếu nếu sync cache thất bại
+    }
   }
-  function saveProducts(arr) {
-    jset(PROD_KEY, arr || []);
-    ping("catalog.bump");
+
+  function listProducts() {
+    if (window.ALL_PRODUCTS && window.ALL_PRODUCTS.length)
+      return window.ALL_PRODUCTS;
+    try {
+      return JSON.parse(localStorage.getItem(PROD_KEY) || "[]");
+    } catch {
+      return [];
+    }
   }
   function getProductById(id) {
     return listProducts().find((p) => String(p.id) === String(id));
   }
-
-  // ===== Stock Transactions =====
-  function listTx() {
-    return jget(TX_KEY, []);
-  }
-  function saveTx(arr) {
-    jset(TX_KEY, arr || []);
-    ping("stock.bump");
-  }
-
-  // ===== Chuẩn hóa items khi tạo / sửa phiếu thật =====
-  function normalizeItems(items) {
-    return (items || []).map((it) => {
-      const p = getProductById(it.productId);
-      return {
-        productId: it.productId,
-        productCode: it.productCode || p?.code || "",
-        productName: it.productName || p?.name || "",
-        lotCode: it.lotCode || `LOT-${Date.now()}`,
-        costPrice: Number(it.costPrice || 0),
-        quantity: Number(it.quantity || 0),
-      };
-    });
+  function searchProducts(q) {
+    const products = listProducts();
+    if (!q) return products;
+    q = q.trim().toLowerCase();
+    return products.filter((p) =>
+      `${p.sku || p.code} ${p.name}`.toLowerCase().includes(q),
+    );
   }
 
-  /* ============================================================
-     CRUD Receipts (dữ liệu thật của Admin)
-     ============================================================ */
-  function listReceipts() {
-    return receiptsRead();
-  }
-  function saveReceipts(arr) {
-    receiptsWrite(arr);
-  }
-  function getReceiptById(id) {
-    return listReceipts().find((r) => r.id === id);
-  }
-
-  function createReceipt({ date, supplier, note, items }) {
-    const all = listReceipts();
-    const norm = normalizeItems(items);
-    const t = calcTotals(norm);
-
-    const rec = {
-      id: genId("PN"),
-      code: nextCode(),
-      date: date || today(),
-      supplier: supplier || "",
-      note: note || "",
-      status: "draft",
-      items: norm,
-      totalCost: t.totalCost,
-      totalQty: t.totalQty,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    all.push(rec);
-    saveReceipts(all);
-    return rec;
-  }
-
-  function updateReceipt(id, patch) {
-    const all = listReceipts();
-    const i = all.findIndex((r) => r.id === id);
-    if (i < 0) throw "Không tìm thấy phiếu";
-    if (all[i].status !== "draft") throw "Chỉ sửa phiếu ở trạng thái DRAFT";
-
-    const cur = all[i];
-    const merged = { ...cur, ...patch };
-
-    if (patch.items) {
-      merged.items = normalizeItems(patch.items);
-      const t = calcTotals(merged.items);
-      merged.totalCost = t.totalCost;
-      merged.totalQty = t.totalQty;
-    }
-    merged.updatedAt = Date.now();
-
-    all[i] = merged;
-    saveReceipts(all);
-    return merged;
-  }
-
-  function completeReceipt(id) {
-    const all = listReceipts();
-    const i = all.findIndex((r) => r.id === id);
-    if (i < 0) throw "Không tìm thấy phiếu";
-    const rec = all[i];
-    if (rec.status !== "draft") throw "Phiếu đã hoàn thành";
-
-    // cộng tồn kho thật cho các phiếu do Admin tạo (demo thì productId undefined nên bỏ qua)
-    let prods = listProducts();
-    rec.items.forEach((it) => {
-      const idx = prods.findIndex((p) => String(p.id) === String(it.productId));
-      if (idx < 0) return;
-      prods[idx].qty = Number(prods[idx].qty || 0) + Number(it.quantity || 0);
-    });
-    saveProducts(prods);
-
-    rec.status = "completed";
-    rec.completedAt = Date.now();
-    rec.updatedAt = Date.now();
-    all[i] = rec;
-    saveReceipts(all);
-
-    return rec;
-  }
-
-  /* ============================================================
-     UI CODE
-     ============================================================ */
-
+  // ===== DOM Elements =====
   const $tbody = $("#rcp-body");
-  const $q = $("#f_q");
-  const $st = $("#f_status");
-  const $from = $("#f_from");
-  const $to = $("#f_to");
+  const $fQuery = $("#f_q");
+  const $fStatus = $("#f_status");
+  const $fDate = $("#f_date");
+  const $prodSuggestions = $("#prod-suggestions");
   const $btnFilter = $("#btnFilter");
   const $btnNew = $("#btn-new");
-
   const $modal = $("#pn-modal");
   const $title = $("#pn-title");
   const $date = $("#pn_date");
-  const $supplier = $("#pn_supplier");
   const $note = $("#pn_note");
   const $sprod = $("#s_prod");
   const $btnAddLine = $("#btnAddLine");
@@ -353,263 +149,400 @@
 
   let STATE = { id: null, status: "draft", items: [] };
 
-  function renderLines() {
-    $lines.innerHTML = STATE.items
-      .map((it, i) => {
-        const p = getProductById(it.productId);
-        const name = it.productName || p?.name || "(Đã xóa)";
-        return `
-          <tr data-idx="${i}">
-            <td>${esc(it.productCode)} – ${esc(name)}</td>
-            <td>
-              <input data-f="lot" class="input" value="${esc(
-                it.lotCode || ""
-              )}">
-            </td>
-            <td style="text-align:right">
-              <input data-f="cost" class="input" type="number" value="${
-                it.costPrice
-              }">
-            </td>
-            <td style="text-align:right">
-              <input data-f="qty" class="input" type="number" value="${
-                it.quantity
-              }">
-            </td>
-            <td>
-              <button data-act="rm" class="btn sm">Xóa</button>
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
-
+  function renderSummary() {
     const sumQ = STATE.items.reduce((s, it) => s + Number(it.quantity || 0), 0);
     const sumC = STATE.items.reduce(
       (s, it) => s + Number(it.quantity || 0) * Number(it.costPrice || 0),
-      0
+      0,
     );
     $sumQty.textContent = money(sumQ);
     $sumCost.textContent = money(sumC);
+    $meta.innerHTML = STATE.id
+      ? `Mã phiếu: <b>${esc(STATE.code)}</b> – Trạng thái: <b>${esc(STATE.status)}</b> | Lần nhập: ${STATE.items.length}`
+      : `Lần nhập: ${STATE.items.length}`;
   }
 
-  function reload() {
-    const q = ($q.value || "").trim().toLowerCase();
-    const st = $st.value;
-    const from = $from.value ? new Date($from.value) : null;
-    const to = $to.value ? new Date($to.value) : null;
+  // ===== LOAD DỮ LIỆU TỪ API =====
+  function loadDataFromAPI() {
+    $tbody.innerHTML =
+      '<tr><td colspan="8" style="text-align:center;">Đang tải dữ liệu...</td></tr>';
+    const params = new URLSearchParams();
+    const q = ($fQuery.value || "").trim();
+    if (q) params.set("q", q);
+    if ($fStatus.value) params.set("status", $fStatus.value);
+    if ($fDate.value) params.set("created_at", $fDate.value);
 
-    const rows = listReceipts().filter((r) => {
-      if (st && r.status !== st) return false;
-      const d = new Date(r.date);
-      if (from && d < from) return false;
-      if (to && d > to) return false;
+    const url =
+      "./api/imports.php?action=list_detail" +
+      (params.toString() ? "&" + params.toString() : "");
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.success) throw new Error("Lỗi tải dữ liệu");
+        window.DB_RECEIPTS = data.receipts || [];
+        renderTable(window.DB_RECEIPTS);
+      })
+      .catch(() => {
+        $tbody.innerHTML =
+          '<tr><td colspan="7" style="text-align:center;color:red;">Lỗi kết nối cơ sở dữ liệu!</td></tr>';
+      });
+  }
 
-      if (q) {
-        const hay = `${r.code} ${r.supplier} ${r.note}`.toLowerCase();
-        const matchItems = (r.items || []).some((it) =>
-          `${it.productCode} ${it.productName}`.toLowerCase().includes(q)
-        );
-        if (!hay.includes(q) && !matchItems) return false;
-      }
-      return true;
-    });
-
-    if (!rows.length) {
+  // ===== RENDER BẢNG NGOÀI =====
+  function renderTable(receipts) {
+    if (!receipts.length) {
       $tbody.innerHTML =
-        '<tr><td colspan="8" style="text-align:center;padding:20px;color:#aaa">Không có dữ liệu</td></tr>';
+        '<tr><td colspan="7" style="text-align:center;color:#aaa">Không có phiếu nhập nào.</td></tr>';
       return;
     }
 
-    $tbody.innerHTML = rows
+    $tbody.innerHTML = receipts
       .map((r) => {
-        const list = (r.items || []).map(
-          (it) => `${it.productCode} – ${it.productName}`
+        const sp = r.items
+          .map((i) => `${i.sku} – ${i.product_name}`)
+          .join("<br>");
+        const total_qty = r.items.reduce((s, i) => s + Number(i.quantity), 0);
+        const total_money = r.items.reduce(
+          (s, i) => s + Number(i.quantity) * Number(i.unit_cost),
+          0,
         );
-        const preview = list.slice(0, 2).join(", ");
-        const more = list.length > 2 ? ` (+${list.length - 2} sp)` : "";
 
-        return `
-        <tr>
-          <td><b>${esc(r.code)}</b></td>
-          <td>${esc(r.date)}</td>
-          <td>${esc(preview)}${more}</td>
-          <td>${esc(r.supplier)}</td>
-          <td class="num">${money(r.totalQty)}</td>
-          <td class="num">${money(r.totalCost)}</td>
-          <td>${esc(r.status)}</td>
-          <td>
-            <button data-act="view" data-id="${
-              r.id
-            }" class="btn sm">Xem</button>
-            ${
-              r.status === "draft"
-                ? `<button data-act="edit" data-id="${r.id}" class="btn sm">Sửa</button>`
-                : ""
-            }
-            ${
-              r.status === "draft"
-                ? `<button data-act="complete" data-id="${r.id}" class="btn sm primary">Hoàn thành</button>`
-                : ""
-            }
-          </td>
-        </tr>`;
+        const statusLabel =
+          r.status === "draft"
+            ? "Chưa nhập"
+            : r.status === "completed"
+              ? "Hoàn thành"
+              : esc(r.status);
+        return `<tr>
+        <td><b>${esc(r.receipt_code)}</b></td>
+        <td>${esc((r.receipt_date || "").slice(0, 10))}</td>
+        <td>${sp}</td>
+        <td class='num'>${money(total_qty)}</td>
+        <td class='num'>${money(total_money)}</td>
+        <td>${statusLabel}</td>
+        <td>
+          ${r.status === "draft" ? `<button data-act="edit" data-id="${r.receipt_id}" class="btn sm">Sửa</button>` : ""}
+          ${r.status === "draft" ? `<button data-act="complete" data-id="${r.receipt_id}" class="btn sm primary">Hoàn thành</button>` : ""}
+        </td>
+      </tr>`;
       })
       .join("");
   }
 
-  function openForm(id, readonly = false) {
-    const cur = id ? getReceiptById(id) : null;
+  // ===== RENDER CHI TIẾT TRONG MODAL =====
+  function renderLines() {
+    if (!STATE.items.length) {
+      $lines.innerHTML = `
+        <tr>
+          <td colspan="4" style="text-align:center;color:#777;padding:24px;">Chưa có sản phẩm. Nhập mã/tên sản phẩm rồi nhấn Thêm để tạo dòng nhập.</td>
+        </tr>
+      `;
+    } else {
+      $lines.innerHTML = STATE.items
+        .map((it, i) => {
+          const p = getProductById(it.productId) || { name: it.productName };
+          const name = p.name || "(Đã xóa)";
+          return `
+          <tr data-idx="${i}">
+            <td title="${esc(it.productCode)} – ${esc(name)}">${esc(it.productCode)} – ${esc(name)}</td>
+            <td><input data-f="cost" class="input" type="text" inputmode="decimal" autocomplete="off" value="${moneyInput(it.costPrice)}" placeholder="0"></td>
+            <td><input data-f="qty" class="input" type="number" min="1" step="1" value="${it.quantity}" placeholder="1"></td>
+            <td><button type="button" data-act="remove" class="btn sm">Xóa</button></td>
+          </tr>
+        `;
+        })
+        .join("");
+    }
 
-    STATE = cur
-      ? {
-          id: cur.id,
-          status: cur.status,
-          items: JSON.parse(JSON.stringify(cur.items || [])),
-        }
-      : { id: null, status: "draft", items: [] };
+    renderSummary();
+  }
+
+  // ===== MỞ FORM MODAL =====
+  function openForm(id, readonly = false) {
+    let cur = null;
+    if (id) {
+      // Tìm phiếu trong biến toàn cục vừa fetch từ DB
+      cur = window.DB_RECEIPTS.find((r) => String(r.receipt_id) === String(id));
+    }
+
+    if (cur) {
+      STATE = {
+        id: cur.receipt_id,
+        status: cur.status,
+        code: cur.receipt_code,
+        // Chuyển đổi format items từ DB sang format của Form
+        items: cur.items.map((i) => ({
+          productId: i.product_id,
+          productCode: i.sku,
+          productName: i.product_name,
+          costPrice: i.unit_cost,
+          quantity: i.quantity,
+        })),
+      };
+    } else {
+      STATE = { id: null, status: "draft", code: nextCode(), items: [] };
+    }
 
     $title.textContent = cur
       ? readonly
         ? "Xem phiếu nhập"
         : "Sửa phiếu nhập"
       : "Tạo phiếu nhập";
-
-    $date.value = cur ? cur.date : today();
-    $supplier.value = cur?.supplier || "";
+    $date.min = today();
+    $date.value = cur ? cur.receipt_date.slice(0, 10) : today();
     $note.value = cur?.note || "";
-
+    const statusLabel = cur
+      ? cur.status === "draft"
+        ? "Chưa nhập"
+        : cur.status === "completed"
+          ? "Hoàn thành"
+          : esc(cur.status)
+      : "";
     $meta.innerHTML = cur
-      ? `Mã phiếu: <b>${esc(cur.code)}</b> – Trạng thái: <b>${esc(
-          cur.status
-        )}</b>`
+      ? `Mã phiếu: <b>${esc(cur.receipt_code)}</b> – Trạng thái: <b>${statusLabel}</b>`
       : "";
 
     const editable = !readonly && (!cur || cur.status === "draft");
     $btnSave.style.display = editable ? "inline-flex" : "none";
-    $btnComplete.style.display =
-      cur && cur.status === "draft" ? "inline-flex" : "none";
+    if ($btnComplete)
+      $btnComplete.style.display =
+        cur && cur.status === "draft" ? "inline-flex" : "none";
 
     renderLines();
     $modal.classList.add("show");
-    $modal.setAttribute("aria-hidden", "false");
   }
 
-  /* ============================================================
-     EVENTS
-     ============================================================ */
-  $btnClose?.addEventListener("click", () => {
-    $modal.classList.remove("show");
-    $modal.setAttribute("aria-hidden", "true");
-  });
-  $modal?.addEventListener("click", (e) => {
-    if (e.target === $modal) {
-      $modal.classList.remove("show");
-      $modal.setAttribute("aria-hidden", "true");
+  // ===== EVENTS =====
+  $btnClose?.addEventListener("click", () => $modal.classList.remove("show"));
+  $btnNew?.addEventListener("click", () => openForm(null, false));
+  $btnFilter?.addEventListener("click", loadDataFromAPI); // Nút filter tạm thời reload lại toàn bộ dữ liệu DB
+  $fQuery?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      loadDataFromAPI();
     }
   });
 
-  // thêm dòng
-  $btnAddLine?.addEventListener("click", () => {
-    const kw = ($sprod.value || "").trim().toLowerCase();
-    const found = listProducts().filter((p) =>
-      `${p.code} ${p.name}`.toLowerCase().includes(kw)
-    );
-    if (!found.length) return alert("Không tìm thấy sản phẩm");
+  function addProductLine(p) {
+    if (!p) return alert("Không tìm thấy sản phẩm trong hệ thống");
 
-    const p = found[0];
-    const lot = prompt("Mã lô:", `LOT-${Date.now()}`);
-    if (lot === null) return;
-    const cost = Number(prompt("Giá nhập:", p.cost || p.price || 0) || 0);
-    const qty = Number(prompt("Số lượng:", 1) || 0);
-    if (!qty) return;
+    const existing = STATE.items.find(
+      (it) => String(it.productId) === String(p.id),
+    );
+    if (existing) {
+      existing.quantity = Number(existing.quantity || 0) + 1;
+      renderLines();
+      return;
+    }
 
     STATE.items.push({
       productId: p.id,
-      productCode: p.code,
+      productCode: p.sku || p.code,
       productName: p.name,
-      lotCode: lot,
-      costPrice: cost,
-      quantity: qty,
+      costPrice: Number(p.cost_price || 0),
+      quantity: 1,
     });
-
     renderLines();
+  }
+
+  function pickProductByKeyword() {
+    const kw = ($sprod.value || "").trim();
+    if (!kw) return alert("Nhập mã hoặc tên sản phẩm để thêm.");
+    const found = searchProducts(kw);
+    if (!found.length) return alert("Không tìm thấy sản phẩm trong hệ thống");
+    addProductLine(found[0]);
+  }
+
+  function showProductSuggestions() {
+    const q = ($sprod.value || "").trim();
+    const items = searchProducts(q);
+    if (!items.length) {
+      $prodSuggestions.innerHTML = "";
+      return;
+    }
+    $prodSuggestions.innerHTML = `<div class="suggestions-list">${items
+      .map(
+        (p) =>
+          `<div data-id="${p.id}">${esc(p.sku || p.code)} — ${esc(p.name)} (${esc(p.supplier || "NCC không rõ")})</div>`,
+      )
+      .join("")}</div>`;
+  }
+
+  $btnAddLine?.addEventListener("click", pickProductByKeyword);
+  $sprod?.addEventListener("input", showProductSuggestions);
+  $sprod?.addEventListener("click", showProductSuggestions);
+  $sprod?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      pickProductByKeyword();
+    }
   });
 
-  // sửa / xóa dòng
+  document.addEventListener("click", (e) => {
+    if (
+      !e.target.closest("#prod-suggestions") &&
+      !e.target.closest("#s_prod")
+    ) {
+      $prodSuggestions.innerHTML = "";
+    }
+  });
+
+  // Clicking a suggestion only fills the input, doesn't add the product yet
+  // User must click "Thêm" button or press Enter to actually add the product
+  $prodSuggestions?.addEventListener("click", (e) => {
+    const item = e.target.closest("div[data-id]");
+    if (!item) return;
+    const prod = listProducts().find(
+      (p) => String(p.id) === String(item.dataset.id),
+    );
+    if (!prod) return;
+    // Fill the input with the selected product
+    $sprod.value = `${prod.sku || prod.code} ${prod.name}`;
+    // Close suggestions dropdown
+    $prodSuggestions.innerHTML = "";
+    // Product will be added when user clicks "Thêm" button or presses Enter
+  });
+
+  // Sửa số lượng, giá và xóa dòng
   $lines?.addEventListener("input", (e) => {
     const tr = e.target.closest("tr");
     if (!tr) return;
     const idx = Number(tr.dataset.idx);
     const f = e.target.dataset.f;
 
-    if (f === "cost") STATE.items[idx].costPrice = Number(e.target.value || 0);
-    if (f === "qty") STATE.items[idx].quantity = Number(e.target.value || 0);
-    if (f === "lot") STATE.items[idx].lotCode = e.target.value;
-
-    renderLines();
+    if (f === "cost") {
+      const price = Math.max(0, parseMoneyInput(e.target.value));
+      STATE.items[idx].costPrice = price;
+      // Real-time validation: price must be > 0
+      if (price <= 0) {
+        e.target.classList.add("error");
+      } else {
+        e.target.classList.remove("error");
+      }
+      renderSummary();
+    }
+    if (f === "qty") {
+      const qty = Math.max(1, Number(e.target.value || 0));
+      STATE.items[idx].quantity = qty;
+      // Real-time validation: quantity must be >= 1
+      if (qty < 1) {
+        e.target.classList.add("error");
+      } else {
+        e.target.classList.remove("error");
+      }
+      renderSummary();
+    }
   });
+
+  $lines?.addEventListener(
+    "blur",
+    (e) => {
+      const input = e.target;
+      if (!input || input.dataset.f !== "cost") return;
+      const tr = input.closest("tr");
+      if (!tr) return;
+      const idx = Number(tr.dataset.idx);
+      STATE.items[idx].costPrice = Math.max(0, parseMoneyInput(input.value));
+      input.value = moneyInput(STATE.items[idx].costPrice);
+      renderSummary();
+    },
+    true,
+  );
+
   $lines?.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-act='rm']");
+    const btn = e.target.closest("button[data-act]");
     if (!btn) return;
+    if (btn.dataset.act !== "remove") return;
     const tr = btn.closest("tr");
+    if (!tr) return;
     const idx = Number(tr.dataset.idx);
     STATE.items.splice(idx, 1);
     renderLines();
   });
 
-  // lưu draft
-  $btnSave?.addEventListener("click", () => {
-    const data = {
-      date: $date.value || today(),
-      supplier: $supplier.value,
-      note: $note.value,
-      items: STATE.items,
-    };
+  // GỌI API: LƯU PHIẾU
+  $btnSave?.addEventListener("click", async () => {
+    if (!STATE.items.length) return alert("Vui lòng thêm ít nhất 1 sản phẩm!");
+
+    // Validate: price > 0 (not <= 0), quantity >= 1
+    const invalidItem = STATE.items.find(
+      (it) => Number(it.quantity) < 1 || Number(it.costPrice) <= 0,
+    );
+    if (invalidItem) return alert("Số lượng phải >= 1 và giá nhập phải > 0.");
+
+    const selectedDate = $date.value || today();
+    if (selectedDate < today()) {
+      return alert("Ngày nhập phải là hôm nay hoặc ngày tương lai.");
+    }
+
+    const formData = new FormData();
+    formData.append("code", STATE.code);
+    formData.append("created_at", selectedDate + " 00:00:00");
+    formData.append("note", $note.value);
+
+    const productsDetail = STATE.items.map((it) => ({
+      product_id: it.productId,
+      quantity: it.quantity,
+      unit_cost: it.costPrice,
+    }));
+    formData.append("products", JSON.stringify(productsDetail));
+
+    let url = "./api/imports.php?action=create";
+    if (STATE.id) {
+      url = "./api/imports.php?action=update";
+      formData.append("receipt_id", STATE.id);
+    }
 
     try {
-      if (STATE.id) {
-        updateReceipt(STATE.id, data);
-      } else {
-        const rec = createReceipt(data);
-        STATE.id = rec.id;
+      const res = await fetch(url, { method: "POST", body: formData });
+      const text = await res.text();
+      let result;
+      try {
+        result = JSON.parse(text);
+      } catch (parseError) {
+        return alert("Lỗi server: response không phải JSON:\n" + text);
       }
-      alert("Đã lưu");
-      $modal.classList.remove("show");
-      $modal.setAttribute("aria-hidden", "true");
-      reload();
+      if (result.success) {
+        alert(result.message);
+        $modal.classList.remove("show");
+        loadDataFromAPI(); // Cập nhật lại bảng
+      } else {
+        alert("Lỗi server: " + result.message);
+      }
     } catch (e) {
-      alert(e);
+      alert("Lỗi kết nối: " + e.message);
     }
   });
 
-  // hoàn thành phiếu
-  $btnComplete?.addEventListener("click", () => {
+  // GỌI API: HOÀN THÀNH PHIẾU
+  $btnComplete?.addEventListener("click", async () => {
     if (!STATE.id) return alert("Hãy lưu phiếu trước");
+    if (!confirm("Hoàn thành phiếu? Phiếu sẽ không thể sửa được nữa.")) return;
 
-    if (
-      !confirm(
-        "Hoàn thành phiếu? Sau khi hoàn thành sẽ cộng tồn kho và không sửa được."
-      )
-    )
-      return;
+    const formData = new FormData();
+    formData.append("receipt_id", STATE.id);
 
     try {
-      completeReceipt(STATE.id);
-      alert("Đã hoàn thành");
-      $modal.classList.remove("show");
-      $modal.setAttribute("aria-hidden", "true");
-      reload();
+      const res = await fetch("./api/imports.php?action=complete", {
+        method: "POST",
+        body: formData,
+      });
+      const result = await res.json();
+      if (result.success) {
+        await syncInventoryCaches();
+        alert(result.message);
+        $modal.classList.remove("show");
+        loadDataFromAPI();
+      } else {
+        alert("Lỗi server: " + result.message);
+      }
     } catch (e) {
-      alert(e);
+      alert("Lỗi kết nối: " + e.message);
     }
   });
 
-  // toolbar
-  $btnNew?.addEventListener("click", () => openForm(null, false));
-  $btnFilter?.addEventListener("click", reload);
-
-  $tbody?.addEventListener("click", (e) => {
+  // Bắt sự kiện click các nút trên bảng
+  $tbody?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
     const id = btn.dataset.id;
@@ -618,41 +551,30 @@
     if (act === "view") openForm(id, true);
     if (act === "edit") openForm(id, false);
     if (act === "complete") {
-      const rec = getReceiptById(id);
-      if (!rec) return alert("Không tìm thấy phiếu");
-      if (rec.status !== "draft") return alert("Phiếu đã hoàn thành");
-      if (!confirm(`Hoàn thành phiếu ${rec.code}?`)) return;
+      if (!confirm(`Xác nhận hoàn thành phiếu này?`)) return;
+      const formData = new FormData();
+      formData.append("receipt_id", id);
       try {
-        completeReceipt(id);
-        alert("Đã hoàn thành");
-        reload();
-      } catch (e) {
-        alert(e);
+        const res = await fetch("./api/imports.php?action=complete", {
+          method: "POST",
+          body: formData,
+        });
+        const result = await res.json();
+        if (result.success) {
+          await syncInventoryCaches();
+          alert("Đã hoàn thành");
+          loadDataFromAPI();
+        } else {
+          alert("Lỗi: " + result.message);
+        }
+      } catch (err) {
+        alert(err);
       }
     }
   });
 
-  /* ============================================================
-     INIT
-     ============================================================ */
-  (function init() {
-    $date.value = today();
-    reload();
-  })();
-
-  // đồng bộ khi tab khác thay đổi
-  window.addEventListener("storage", (e) => {
-    const keys = [
-      RECEIPT_KEY,
-      "receipts.bump",
-      TX_KEY,
-      "stock.bump",
-      PROD_KEY,
-      "catalog.bump",
-    ];
-    if (keys.includes(e.key)) {
-      _RECEIPTS_CACHE = null;
-      reload();
-    }
-  });
-})();
+  // Chạy lần đầu
+  $date.min = today();
+  $date.value = today();
+  loadProducts().then(loadDataFromAPI);
+});

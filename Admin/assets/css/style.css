@@ -2,8 +2,8 @@
 /* ==========================================================================
    Nobility 1800s Admin – style.css (v2025-11-05 RESPONSIVE COMPLETE)
    Chủ đề: Navy #1F235A + Gold #F59E0B + xám hiện đại
-   Dùng chung cho: index.html, users.html, categories.html, products.html,
-   imports.html, inventory.html, orders.html
+   Dùng chung cho: index\.php, users\.php, categories\.php, products\.php,
+   imports\.php, inventory\.php, orders\.php
    
    ✅ RESPONSIVE CHO TẤT CẢ THIẾT BỊ:
    - 📱 Mobile: 320px - 640px
@@ -67,23 +67,43 @@ img {
   position: relative;
 }
 /* chỉ cho bảng admin kéo ngang */
-.page table {
+/* Exception: orders.php table uses proper table display for full width */
+.page table:not(.recentOrders table) {
   display: block;
   overflow-x: auto;
+}
+
+/* Orders page table - keep as proper table */
+.page .recentOrders table {
+  display: table;
+  overflow-x: visible;
 }
 
 .navagation {
   position: fixed;
   inset: 0 auto 0 0;
   width: var(--sidebar-width);
-  background: #2a2185;
+  background:
+    radial-gradient(
+      480px 240px at 12% -10%,
+      rgba(125, 211, 252, 0.2),
+      transparent 70%
+    ),
+    radial-gradient(
+      380px 220px at 100% 8%,
+      rgba(167, 139, 250, 0.16),
+      transparent 72%
+    ),
+    linear-gradient(180deg, #312c9a 0%, #24207a 55%, #1e1b66 100%);
   border-right: 1px solid var(--line);
   box-shadow: var(--shadow-sm);
   z-index: 20;
   padding: 14px 10px;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: width var(--speed), transform var(--speed);
+  transition:
+    width var(--speed),
+    transform var(--speed);
 }
 
 .navagation ul {
@@ -94,6 +114,7 @@ img {
 
 .navagation li {
   margin: 4px 6px;
+  position: relative;
 }
 
 .navagation a {
@@ -105,18 +126,27 @@ img {
   font-weight: 700;
   text-decoration: none;
   color: #fff;
-  transition: background var(--speed), transform var(--speed);
+  border: 1px solid transparent;
+  transition:
+    background var(--speed),
+    transform var(--speed),
+    border-color var(--speed),
+    box-shadow var(--speed);
   white-space: nowrap;
 }
 
 .navagation a:hover {
   transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 18px rgba(13, 20, 62, 0.28);
 }
 
 .navagation .icon {
   display: inline-flex;
   color: #fff;
   min-width: 20px;
+  justify-content: center;
 }
 
 .navagation .title {
@@ -124,12 +154,37 @@ img {
 }
 
 .navagation .hovered > a {
-  background: #fff;
-  color: #000;
+  background: linear-gradient(120deg, #ffffff 0%, #f3f7ff 100%);
+  color: #0f172a;
+  border-color: #d7e4ff;
+  box-shadow: 0 12px 22px rgba(12, 21, 62, 0.24);
 }
 
 .navagation .hovered > a .icon {
-  color: #000;
+  color: #1f235a;
+}
+
+.navagation .hovered::before {
+  content: "";
+  position: absolute;
+  left: -3px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #60a5fa, #c084fc);
+}
+
+.navagation hr {
+  border: 0;
+  height: 1px;
+  margin: 10px 8px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.45),
+    rgba(255, 255, 255, 0.08)
+  );
 }
 
 .main {
@@ -223,9 +278,13 @@ img {
   padding: 10px 12px;
   border-radius: var(--radius-md);
   font-weight: 800;
+  font-family: inherit;
   cursor: pointer;
-  transition: transform var(--speed), box-shadow var(--speed),
-    background var(--speed), color var(--speed);
+  transition:
+    transform var(--speed),
+    box-shadow var(--speed),
+    background var(--speed),
+    color var(--speed);
   white-space: nowrap;
   font-size: 13px;
 }
@@ -290,6 +349,7 @@ textarea {
   outline: none;
   width: 100%;
   font-size: 13px;
+  font-family: inherit;
 }
 
 .input:focus,
@@ -364,7 +424,9 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: transform var(--speed), box-shadow var(--speed);
+  transition:
+    transform var(--speed),
+    box-shadow var(--speed);
 }
 
 .card .numbers {
@@ -398,6 +460,265 @@ textarea:focus {
 
 .details > *:only-child {
   grid-column: 1 / -1;
+}
+
+/* ========== Page-Scoped Categories Table (Full Width) ========== */
+/* Fix: Override .details grid for categories page to use full width */
+.categories-table-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: block;
+}
+
+.categories-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  display: table !important;
+}
+
+/* ========== Page-Scoped Products Table (Full Width + Column Widths) ========== */
+/* Fix: Override .details grid for products page to use full width */
+.products-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.products-toolbar .input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.products-filter-cat,
+.products-filter-status {
+  flex: 0 1 auto;
+  min-width: 140px;
+}
+
+@media (min-width: 992px) {
+  .products-toolbar {
+    flex-wrap: nowrap;
+  }
+  .products-toolbar .input {
+    flex: 1 1 auto;
+  }
+  .products-filter-cat,
+  .products-filter-status {
+    flex: 0 1 160px;
+  }
+}
+
+.products-table-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: block;
+}
+
+.products-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  display: table !important;
+  /* Reduce row height by reducing padding */
+  font-size: 13px;
+}
+
+/* Product table column widths - balanced for readability */
+.products-table thead td,
+.products-table tbody td {
+  padding: 8px 10px !important;
+  /* Reduced from 12px */
+}
+
+.products-table .col-id {
+  width: 45px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.products-table .col-thumb {
+  width: 50px;
+  text-align: center;
+}
+
+.products-table .col-code {
+  width: 80px;
+  white-space: nowrap;
+}
+
+.products-table .col-name {
+  width: 18%;
+  min-width: 140px;
+  /* Give Name column more space */
+}
+
+.products-table .col-cat {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.products-table .col-unit {
+  width: 70px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.products-table .col-qty {
+  width: 60px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.products-table .col-cost {
+  width: 90px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.products-table .col-markup {
+  width: 65px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.products-table .col-price {
+  width: 100px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.products-table .col-supplier {
+  width: 16%;
+  min-width: 120px;
+  /* Give Supplier column more space */
+}
+
+.products-table .col-status {
+  width: 90px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.products-table .col-actions {
+  width: 200px;
+  white-space: nowrap;
+  /* Prevent action buttons from wrapping */
+}
+
+/* ========== Page-Scoped Pricing Table (Full Width + Right-Aligned Numbers) ========== */
+/* Fix: Responsive toolbar + Full width table + Numeric right-align */
+
+.pricing-toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.pricing-toolbar .input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.pricing-filter-cat {
+  flex: 0 1 auto;
+  min-width: 140px;
+}
+
+@media (min-width: 992px) {
+  .pricing-toolbar {
+    flex-wrap: nowrap;
+  }
+  .pricing-toolbar .input {
+    flex: 1 1 auto;
+  }
+  .pricing-filter-cat {
+    flex: 0 1 160px;
+  }
+}
+
+.pricing-table-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: block;
+}
+
+.pricing-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  display: table !important;
+  font-size: 13px;
+}
+
+/* Pricing table column widths + alignment */
+.pricing-table thead td,
+.pricing-table tbody td {
+  padding: 8px 10px !important;
+  /* Reduced from 12px to lower row height */
+}
+
+.pricing-table .col-id {
+  width: 45px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pricing-table .col-code {
+  width: 90px;
+  white-space: nowrap;
+}
+
+.pricing-table .col-name {
+  width: 20%;
+  min-width: 150px;
+  /* Give Name column more space */
+}
+
+.pricing-table .col-cat {
+  width: 110px;
+  white-space: nowrap;
+}
+
+.pricing-table .col-cost {
+  width: 100px;
+  text-align: right;
+  /* Right-align numeric */
+  white-space: nowrap;
+}
+
+.pricing-table .col-markup {
+  width: 90px;
+  text-align: center;
+  /* Center for % values */
+  white-space: nowrap;
+}
+
+.pricing-table .col-price {
+  width: 100px;
+  text-align: right;
+  /* Right-align numeric */
+  white-space: nowrap;
+}
+
+.pricing-table .col-status {
+  width: 90px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.pricing-table .col-actions {
+  width: 160px;
+  white-space: nowrap;
+}
+
+/* Pricing margin input - narrower and right-aligned */
+.pricing-margin-input {
+  width: 70px !important;
+  /* Narrower than default 90px */
+  text-align: right;
+  /* Right-align numeric input text */
 }
 
 .recentOrders,
@@ -449,6 +770,35 @@ table {
   min-width: 600px;
   border-collapse: collapse;
   background: #fff;
+  /* Typography: Ensure consistent font across all elements */
+  font-family: inherit;
+}
+
+/* Normalize typography for table sections */
+tbody {
+  font-family: inherit;
+  font-size: 13px;
+}
+
+thead {
+  font-family: inherit;
+}
+
+.recentOrders > table,
+#tblLines {
+  border: 1px solid #dfe6ef;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+#tblLines td,
+#tblLines thead td {
+  border-right: 1px solid #edf2f7;
+}
+
+#tblLines td:last-child,
+#tblLines thead td:last-child {
+  border-right: none;
 }
 
 thead td {
@@ -473,6 +823,36 @@ tbody tr:hover {
 
 tbody tr:hover td {
   background: #fafafa;
+}
+
+/* ========== Inventory Table - Tồn Column Styling (Unified & Refined) ========== */
+/* Subtle emphasis: bold text + no visible border separation */
+/* Keeps Tồn unified with other numeric columns */
+.recentOrders table tbody td:nth-child(7) {
+  font-weight: 600;
+  /* No background color - blends with table */
+  /* No left border - unified with other columns */
+}
+
+.recentOrders table thead td:nth-child(7) {
+  /* No border-left, no background - unified header */
+}
+
+/* Soften all row dividers slightly */
+.recentOrders table td {
+  border-bottom: 1px solid #f5f7fa;
+}
+
+#tblLines td {
+  border-bottom: 1px solid #dfe6ef;
+}
+
+#tblLines tbody tr:last-child td {
+  border-bottom: none;
+}
+
+#tblLines td:first-child {
+  white-space: nowrap;
 }
 
 /* Actions column - luôn ngang */
@@ -831,6 +1211,25 @@ input::placeholder {
   display: block;
 }
 
+/* ========== Page-Scoped Users Table (Full Width) ========== */
+/* Fix: Ensure users table section and table take 100% width of .page */
+.users-table-section {
+  width: calc(100% + 32px); /* Compensate for .page padding (14px 16px) */
+  margin: 12px -16px 0 -16px; /* Extend to edges */
+  padding: 12px 16px;
+  background: transparent;
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.users-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  display: table !important;
+  overflow: visible !important; /* Override inline overflow: hidden */
+}
+
 /* ========== Scrollbar Styling ========== */
 ::-webkit-scrollbar {
   width: 8px;
@@ -848,6 +1247,40 @@ input::placeholder {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
+}
+
+/* ========== Product Suggestions Dropdown ========== */
+.suggestions {
+  position: relative;
+  z-index: 100;
+}
+
+.suggestions-list {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  max-height: 320px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+  margin-top: 4px;
+}
+
+.suggestions-list > div {
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 13px;
+  border-bottom: 1px solid var(--soft-line);
+  transition: background var(--speed) ease;
+}
+
+.suggestions-list > div:last-child {
+  border-bottom: none;
+}
+
+.suggestions-list > div:hover {
+  background: var(--bg);
+  color: var(--brand);
 }
 
 /* ==========================================================================

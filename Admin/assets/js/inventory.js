@@ -53,7 +53,7 @@
     const catMap = new Map();
     publicArr.forEach((p) => {
       const cid = String(
-        p.categoryId ?? p.category ?? p.cat ?? p.slug ?? ""
+        p.categoryId ?? p.category ?? p.cat ?? p.slug ?? "",
       ).trim();
       if (!cid) return;
       if (!catMap.has(cid)) {
@@ -61,7 +61,7 @@
           id: cid,
           code: (cid.toUpperCase().replace(/\W+/g, "_") || "CAT_" + cid).slice(
             0,
-            24
+            24,
           ),
           name: String(p.categoryName ?? p.category ?? p.cat ?? cid),
           desc: "",
@@ -77,11 +77,11 @@
       : publicArr.map((p, i) => ({
           id: p.id ?? p.code ?? Date.now() + i,
           code: String(
-            p.code ?? p.sku ?? p.id ?? "SP" + (1000 + i)
+            p.code ?? p.sku ?? p.id ?? "SP" + (1000 + i),
           ).toUpperCase(),
           name: String(p.name ?? "Sản phẩm " + (i + 1)),
           categoryId: String(
-            p.categoryId ?? p.category ?? p.cat ?? p.slug ?? ""
+            p.categoryId ?? p.category ?? p.cat ?? p.slug ?? "",
           ),
           qty: Number(p.qty ?? p.stock ?? 0),
           status: p.status ?? "selling",
@@ -99,10 +99,25 @@
   // gọi bootstrap trước khi loadAll
   bootstrapAdminFromCatalogIfEmpty();
 
-  function loadAll() {
-    state.cats = loadJSON(LS_CATS, []);
-    state.prods = loadJSON(LS_PRODS, []);
-    state.txs = loadJSON(LS_TX, []);
+  async function loadAll() {
+    try {
+      const res = await fetch("./api/inventory.php?action=all-data");
+      const body = await res.json();
+
+      if (res.ok && body.success) {
+        state.cats = body.categories || [];
+        state.prods = body.products || [];
+        state.txs = body.transactions || [];
+      } else {
+        state.cats = loadJSON(LS_CATS, []);
+        state.prods = loadJSON(LS_PRODS, []);
+        state.txs = loadJSON(LS_TX, []);
+      }
+    } catch (e) {
+      state.cats = loadJSON(LS_CATS, []);
+      state.prods = loadJSON(LS_PRODS, []);
+      state.txs = loadJSON(LS_TX, []);
+    }
   }
 
   // Helpers
@@ -110,24 +125,58 @@
     return state.cats.find((c) => String(c.id) === String(id))?.name || "—";
   }
 
+  // Chuẩn hóa datetime từ DB/localStorage về timestamp local để tránh lệch múi giờ.
+  function toLocalTimestamp(input) {
+    if (!input) return NaN;
+    if (input instanceof Date) return input.getTime();
+    if (typeof input === "number") return input;
+
+    const raw = String(input).trim();
+    if (!raw) return NaN;
+
+    // Hỗ trợ chuỗi DB: YYYY-MM-DD HH:mm:ss (không timezone) => parse local.
+    const dbMatch = raw.match(
+      /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
+    );
+    if (dbMatch) {
+      const y = Number(dbMatch[1]);
+      const m = Number(dbMatch[2]) - 1;
+      const d = Number(dbMatch[3]);
+      const hh = Number(dbMatch[4]);
+      const mm = Number(dbMatch[5]);
+      const ss = Number(dbMatch[6] || 0);
+      return new Date(y, m, d, hh, mm, ss, 0).getTime();
+    }
+
+    // ISO có timezone (Z / +07:00) hoặc format khác.
+    const parsed = new Date(raw).getTime();
+    return Number.isNaN(parsed) ? NaN : parsed;
+  }
+
   // Số lượng hiện tại: đọc từ admin.products.qty
   function currentQty(productId) {
     const p = state.prods.find((x) => String(x.id) === String(productId));
-    return Number(p?.qty || 0);
+    if (!p) return 0;
+    const qty = Number(p?.qty || 0);
+    return qty;
   }
 
   // Tính tồn tại thời điểm at: từ tồn hiện tại trừ phát sinh SAU thời điểm đó
   function stockOn(productId, at) {
-    const atTS = at ? new Date(at).getTime() : Date.now();
+    const atTS = at ? toLocalTimestamp(at) : Date.now();
+    if (Number.isNaN(atTS)) return currentQty(productId);
     const nowTS = Date.now();
     if (atTS >= nowTS - 1000) return currentQty(productId);
 
     let deltaAfter = 0;
     for (const t of state.txs) {
       if (String(t.productId) !== String(productId)) continue;
-      const ts = new Date(
-        t.createdAt || t.date || t.time || new Date()
-      ).getTime();
+      const tsFromApi = Number(t.occurredTs || t.occurred_ts || 0);
+      const ts =
+        tsFromApi > 0
+          ? tsFromApi * 1000
+          : toLocalTimestamp(t.createdAt || t.date || t.time);
+      if (Number.isNaN(ts)) continue;
       if (ts > atTS) {
         const q = Number(t.qty || 0);
         if (t.type === "import") deltaAfter += q;
@@ -149,7 +198,7 @@
           ">": "&gt;",
           '"': "&quot;",
           "'": "&#39;",
-        }[m])
+        })[m],
     );
   }
 
@@ -162,13 +211,13 @@
     const list = state.prods
       .slice()
       .sort((a, b) =>
-        String(a.name || "").localeCompare(String(b.name || ""), "vi")
+        String(a.name || "").localeCompare(String(b.name || ""), "vi"),
       );
     for (const p of list) {
       opts.push(
         `<option value="${p.id}">${escapeHtml(p.code || "")} — ${escapeHtml(
-          p.name || ""
-        )}</option>`
+          p.name || "",
+        )}</option>`,
       );
     }
     el.innerHTML = opts.join("");
@@ -182,10 +231,10 @@
     const list = state.cats
       .slice()
       .sort((a, b) =>
-        String(a.name || "").localeCompare(String(b.name || ""), "vi")
+        String(a.name || "").localeCompare(String(b.name || ""), "vi"),
       );
     for (const c of list) {
-      if (c.active === false) continue;
+      if (c.status !== "active") continue;
       opts.push(`<option value="${c.id}">${escapeHtml(c.name || "")}</option>`);
     }
     el.innerHTML = opts.join("");
@@ -271,7 +320,7 @@
         0,
         0,
         0,
-        0
+        0,
       ).getTime();
     }
     if (toVal) {
@@ -283,7 +332,7 @@
         23,
         59,
         59,
-        999
+        999,
       ).getTime();
     }
 
@@ -294,15 +343,20 @@
 
     const rows = [];
     for (const p of products) {
-      const begin = fromTS == null ? 0 : stockOn(p.id, new Date(fromTS - 1));
+      const currentQtyVal = currentQty(p.id);
+      const beginRaw = fromTS == null ? 0 : stockOn(p.id, new Date(fromTS - 1));
+      const begin = Number(beginRaw || 0);
       let imp = 0;
       let exp = 0;
 
       for (const t of state.txs) {
         if (String(t.productId) !== String(p.id)) continue;
-        const ts = new Date(
-          t.createdAt || t.date || t.time || new Date()
-        ).getTime();
+        const tsFromApi = Number(t.occurredTs || t.occurred_ts || 0);
+        const ts =
+          tsFromApi > 0
+            ? tsFromApi * 1000
+            : toLocalTimestamp(t.createdAt || t.date || t.time);
+        if (Number.isNaN(ts)) continue;
 
         if ((fromTS == null || ts >= fromTS) && (toTS == null || ts <= toTS)) {
           const q = Number(t.qty || 0);
@@ -315,43 +369,47 @@
         }
       }
 
-      const end = begin + imp - exp;
+      const beginNum = Number(begin || 0);
+      const impNum = Number(imp || 0);
+      const expNum = Number(exp || 0);
+      const end = beginNum + impNum - expNum;
 
       rows.push({
         id: p.id,
         code: p.code,
         name: p.name,
         categoryId: p.categoryId,
-        begin,
-        imp,
-        exp,
-        end,
+        begin: beginNum,
+        imp: impNum,
+        exp: expNum,
+        end: end,
       });
     }
 
     if (!rows.length) {
       body.innerHTML =
-        '<tr><td colspan="8" style="text-align:center;color:#9aa3ad;padding:14px">Không có dữ liệu</td></tr>';
+        '<tr><td colspan="7" style="text-align:center;color:#9aa3ad;padding:14px">Không có dữ liệu</td></tr>';
       if (sumEl) sumEl.textContent = "";
       window.__INV_LAST_REPORT__ = [];
       return;
     }
 
     body.innerHTML = rows
-      .map(
-        (r, i) => `
+      .map((r, i) => {
+        const rowNum = i + 1;
+        const endFormatted = fmtInt(r.end);
+        return `
         <tr>
-          <td>${i + 1}</td>
+          <td>${rowNum}</td>
           <td><code>${escapeHtml(r.code || "")}</code></td>
           <td><strong>${escapeHtml(r.name || "")}</strong></td>
           <td>${escapeHtml(catName(r.categoryId))}</td>
-          <td class="num">${fmtInt(r.begin)}</td>
           <td class="num">${fmtInt(r.imp)}</td>
           <td class="num">${fmtInt(r.exp)}</td>
-          <td class="num"><strong>${fmtInt(r.end)}</strong></td>
+          <td class="num">${endFormatted}</td>
         </tr>
-      `
-      )
+      `;
+      })
       .join("");
 
     const sumBegin = rows.reduce((t, x) => t + x.begin, 0);
@@ -361,7 +419,7 @@
 
     if (sumEl) {
       sumEl.textContent = `Tổng: Tồn đầu ${fmtInt(sumBegin)} • Nhập ${fmtInt(
-        sumImp
+        sumImp,
       )} • Xuất ${fmtInt(sumExp)} • Tồn cuối ${fmtInt(sumEnd)}`;
     }
 
@@ -397,7 +455,7 @@
           r.imp,
           r.exp,
           r.end,
-        ].join(",")
+        ].join(","),
       );
     });
 
@@ -437,24 +495,28 @@
 
     if (!rows.length) {
       body.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#16a34a;padding:14px">Tốt! Không có sản phẩm nào ≤ ${fmtInt(
-        th
+        th,
       )}.</td></tr>`;
       return;
     }
 
     body.innerHTML = rows
-      .map(
-        (x, i) => `
+      .map((x, i) => {
+        const status = x.qty === 0 ? "HẾT HÀNG" : "Sắp hết";
+        const statusClass = x.qty === 0 ? "status" : "status low";
+        const statusStyle =
+          x.qty === 0 ? "background:#dc2626;color:white;" : "";
+        return `
         <tr>
           <td>${i + 1}</td>
           <td><code>${escapeHtml(x.p.code || "")}</code></td>
           <td><strong>${escapeHtml(x.p.name || "")}</strong></td>
           <td>${escapeHtml(catName(x.p.categoryId))}</td>
           <td class="num">${fmtInt(x.qty)}</td>
-          <td><span class="status low">Sắp hết</span></td>
+          <td><span class="${statusClass}" style="${statusStyle}">${status}</span></td>
         </tr>
-      `
-      )
+      `;
+      })
       .join("");
   }
 
@@ -492,21 +554,28 @@
   function bindEvents() {
     $("#btn-check")?.addEventListener("click", handleCheckAt);
     $("#btn-reset-check")?.addEventListener("click", resetCheckAt);
-    $("#btn-run-report")?.addEventListener("click", runReport);
-    $("#btn-export-csv")?.addEventListener("click", exportCSV);
+    $("#btn-filter-report")?.addEventListener("click", runReport);
+    $("#btn-reset-report")?.addEventListener("click", resetReport);
     $("#btn-check-low")?.addEventListener("click", checkLow);
   }
 
+  function resetReport() {
+    if ($("#r-from")) $("#r-from").value = "";
+    if ($("#r-to")) $("#r-to").value = "";
+    if ($("#r-category")) $("#r-category").value = "";
+    runReport();
+  }
+
   // Boot
-  function boot() {
-    loadAll();
+  async function boot() {
+    await loadAll();
     initUI();
     bindEvents();
 
-    // ✅ TỰ CHẠY KHI VÀO TRANG
+    // ✅ TỰ CHẠY KHI VÀO TRANG (sau khi loadAll xong)
     handleCheckAt(); // khối 1: tồn tại thời điểm (tất cả SP, thời điểm hiện tại)
-    runReport();     // khối 2: báo cáo NX tồn tháng hiện tại
-    checkLow();      // khối 3: cảnh báo sắp hết với ngưỡng mặc định
+    runReport(); // khối 2: báo cáo NX tồn tháng hiện tại
+    checkLow(); // khối 3: cảnh báo sắp hết với ngưỡng mặc định
   }
   boot();
 

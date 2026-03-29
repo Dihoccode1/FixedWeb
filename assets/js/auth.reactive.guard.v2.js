@@ -2,7 +2,7 @@
 /**
  * auth.reactive.guard.v2.2.js
  * - Prevents redirect loops & page flicker
- * - Safe on /account/login.html (no redirects from guard while on login page)
+ * - Safe on /account/login.php (no redirects from guard while on login page)
  * - One-time render wrapper
  * - Debounced cross-tab reactions
  *
@@ -18,7 +18,7 @@
   function log(){ if(DEBUG) try{ console.log.apply(console, ['[guard.v2.2]'].concat([].slice.call(arguments))); }catch(_){} }
 
   var PATH = (location.pathname || '').toLowerCase();
-  var IS_LOGIN = PATH.endsWith('../../account/login.html') || PATH.endsWith('../../account/login.html');
+  var IS_LOGIN = PATH.indexOf('/account/login.php') !== -1;
   var REDIRECT_FLAG = 'sv_guard_redirecting_v22';
 
   // ========= One-time render guard =========
@@ -102,7 +102,8 @@
       else localStorage.removeItem('sv_auth_user_v1');
     }catch(_){}
 
-    var url = '../../account/login.html?reason=' + encodeURIComponent(msg||'Đăng nhập lại để tiếp tục.');
+    var loginUrl = (window.AUTH && window.AUTH.LOGIN_URL) ? window.AUTH.LOGIN_URL : './account/login.php';
+    var url = loginUrl + '?reason=' + encodeURIComponent(msg||'Đăng nhập lại để tiếp tục.');
     try{ window.location.replace(url); }catch(_){ window.location.href = url; }
   }
 

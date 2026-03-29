@@ -15,6 +15,19 @@
   const stripVN = (str = "") =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
+  const normalizeForSearch = (str = "") =>
+    stripVN(str).replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+
+  function getAppRoot() {
+    var script = document.currentScript || document.scripts[document.scripts.length - 1];
+    if (!script || !script.src) return new URL("./", location.href);
+    var url = new URL(script.src, location.origin);
+    url.pathname = url.pathname.replace(/\/assets\/js\/[^/]+$/, "/");
+    return url;
+  }
+
+  const APP_ROOT = getAppRoot();
+
   const normalizeBadge = (p) => {
     const b = String(p?.badge || "").toLowerCase().trim();
     if (b === "sale") return "sale";
@@ -27,9 +40,11 @@
     normalizeBadge(p) === "out_of_stock" ||
     (typeof p.stock === "number" && p.stock <= 0);
 
-  // Luôn build về /sanpham/pages/product_detail.html
   const productDetailUrl = (p) =>
-    `../../sanpham/pages/product_detail.html?id=${encodeURIComponent(p.id)}`;
+    new URL(
+      `../Product/pages/product_detail.php?id=${encodeURIComponent(p.id)}`,
+      APP_ROOT
+    ).pathname;
 
   const badgeHTML = (p) => {
     const b = normalizeBadge(p);
@@ -97,8 +112,13 @@
     const el = d.querySelector("#cartCount") || d.querySelector(".cart-count");
     if (!el) return;
 
+    const isCartPage = /\/cart\.php(?:$|[?#])/i.test(location.pathname + location.search);
+    const cartLooksEmpty = !!d.querySelector('.alert-warning') && d.querySelectorAll('.cart-item-row').length === 0;
+
     let n = 0;
-    if (w.SVStore?.count) {
+    if (typeof w.SERVER_CART_COUNT === 'number') {
+      n = Math.max(0, Number(w.SERVER_CART_COUNT) || 0);
+    } else if (w.SVStore?.count) {
       n = SVStore.count();
     } else {
       // fallback đọc trực tiếp nếu cần
@@ -106,6 +126,11 @@
         const c = JSON.parse(localStorage.getItem("sv_cart_user_fallback") || "[]");
         n = c.reduce((s, x) => s + (x.qty || 0), 0);
       } catch (_) {}
+    }
+
+    if (isCartPage && cartLooksEmpty) {
+      n = 0;
+      window.SERVER_CART_COUNT = 0;
     }
     el.textContent = n;
   }
@@ -127,6 +152,13 @@
     if (opts.newOnly)      base = base.filter((p) => normalizeBadge(p) === "new");
     if (opts.featuredOnly) base = base.filter((p) => p.featured === true);
 
+    window.addEventListener("storage", (e) => {
+      if (e.key === "catalog.bump") {
+        base = (w.SVStore?.getAllProducts?.() || w.SV_PRODUCT_SEED || []).slice();
+        render();
+      }
+    });
+
     // State
     const state = {
       q: "",
@@ -143,8 +175,12 @@
 
       // search
       if (state.q) {
-        const kw = stripVN(state.q);
-        rs = rs.filter((p) => stripVN(p.name || "").includes(kw));
+        const kw = normalizeForSearch(state.q);
+        rs = rs.filter((p) => {
+          const nameNorm = normalizeForSearch(p.name || "");
+          if (!nameNorm) return false;
+          return nameNorm.split(" ").some((word) => word && word.startsWith(kw));
+        });
       }
 
       // category
@@ -230,6 +266,12 @@
       if (!id || !w.SVStore?.addToCart) return;
 
       SVStore.addToCart(id, 1);
+      const op = w.SVStore?.getLastCartOp?.();
+      if (op && op.addedQty <= 0 && op.message) {
+        alert(op.message);
+        updateCartCount();
+        return;
+      }
       updateCartCount();
 
       // feedback
@@ -240,6 +282,12 @@
         btn.disabled = false;
         btn.innerHTML = old;
       }, 800);
+    });
+
+    window.addEventListener("storage", (e) => {
+      if (e.key === "catalog.bump") {
+        render();
+      }
     });
 
     render();
@@ -256,4 +304,10 @@
     updateCartCount();
   });
 
+  // Cập nhật lại badge khi auth hoặc cart server thay đổi
+  d.addEventListener("auth:changed", updateCartCount);
+  d.addEventListener("auth:ready", updateCartCount);
+  window.addEventListener("cart:changed", updateCartCount);
+
 })(window, document);
+

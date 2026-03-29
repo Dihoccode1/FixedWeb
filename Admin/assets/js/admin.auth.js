@@ -95,7 +95,13 @@
         requireLoginOrRedirect: function () {
             if (!ADMIN_AUTH.loggedIn) {
                 const back = encodeURIComponent(w.location.pathname + w.location.search);
-                w.location.href = '../../../admin/login.html?redirect=' + back;
+                // Calculate admin base path dynamically
+                const pathParts = w.location.pathname.split('/').filter(p => p);
+                const adminIndex = pathParts.indexOf('Admin');
+                const adminBasePath = adminIndex >= 0 
+                    ? '/' + pathParts.slice(0, adminIndex).join('/') + '/Admin/'
+                    : '/Admin/';
+                w.location.href = adminBasePath + 'login.php?redirect=' + back;
                 return false;
             }
             return true;
